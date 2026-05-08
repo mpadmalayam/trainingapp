@@ -132,6 +132,10 @@
     textarea.form-input { font-family: inherit; }
     .save-btn { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; padding: 14px; cursor: pointer; margin-top: 8px; }
     .cancel-btn { width: 100%; background: none; border: none; color: var(--text2); font-size: 15px; padding: 12px; cursor: pointer; margin-top: 4px; }
+    .data-btn { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 15px; font-weight: 600; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left; }
+    .data-btn svg { flex-shrink: 0; color: var(--accent); }
+    .data-btn span { display: block; font-size: 12px; font-weight: 400; color: var(--text2); margin-top: 2px; }
+    .data-btn:active { border-color: var(--accent); }
 
     /* ── Stats Page ── */
     .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
@@ -471,6 +475,21 @@
   <div class="stats-grid" id="stats-grid"></div>
   <p class="section-label">Most Frequent Exercises</p>
   <div class="freq-card" id="freq-container"></div>
+  <p class="section-label">Data</p>
+  <div style="padding: 0 16px 32px; display:flex; flex-direction:column; gap:10px">
+    <button class="data-btn" onclick="exportData()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export Data
+      <span>Save a backup of all your schedule, sessions &amp; exercises</span>
+    </button>
+    <button class="data-btn" onclick="document.getElementById('import-file-input').click()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Import Data
+      <span>Restore from a previously exported backup file</span>
+    </button>
+    <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(this)">
+    <div id="import-status" style="font-size:13px;color:var(--green);text-align:center;min-height:18px"></div>
+  </div>
 </div>
 
 <!-- Schedule Page -->
@@ -2126,6 +2145,78 @@ function saveSchedEdit() {
 // ─────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// EXPORT / IMPORT
+// ─────────────────────────────────────────────────────────────
+const BACKUP_KEYS = [
+  'proResultsSchedule',
+  'proResultsDoneDates',
+  'proResultsDateOverrides',
+  'proResultsFrozenSlots',
+  'proResultsCustomSessions',
+  'proResultsCustomExercises',
+];
+
+function exportData() {
+  const data = {};
+  BACKUP_KEYS.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v) data[k] = JSON.parse(v);
+  });
+  data._exportedAt = new Date().toISOString();
+  data._version = 1;
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href     = url;
+  a.download = `proresults-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      let count = 0;
+      BACKUP_KEYS.forEach(k => {
+        if (data[k] !== undefined) {
+          localStorage.setItem(k, JSON.stringify(data[k]));
+          count++;
+        }
+      });
+      // Reload state from localStorage
+      schedConfig      = loadScheduleConfig();
+      doneDates        = JSON.parse(localStorage.getItem('proResultsDoneDates') || '[]');
+      dateOverrides    = JSON.parse(localStorage.getItem('proResultsDateOverrides') || '{}');
+      frozenSlots      = JSON.parse(localStorage.getItem('proResultsFrozenSlots') || '[]');
+      customSessions   = JSON.parse(localStorage.getItem('proResultsCustomSessions') || '[]');
+      customExercises  = JSON.parse(localStorage.getItem('proResultsCustomExercises') || '[]');
+      uniqueExercises  = getUniqueExercises();
+      // Re-render everything
+      renderSessions();
+      renderExerciseChips();
+      renderExerciseGrid();
+      renderStats();
+      renderDayPicker();
+      renderSchedule();
+      const status = document.getElementById('import-status');
+      status.textContent = `✓ Restored ${count} data sets successfully`;
+      setTimeout(() => status.textContent = '', 4000);
+    } catch (err) {
+      document.getElementById('import-status').style.color = 'var(--accent)';
+      document.getElementById('import-status').textContent = 'Import failed — invalid file';
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
 renderSessions();
 renderExerciseChips();
 renderExerciseGrid();
