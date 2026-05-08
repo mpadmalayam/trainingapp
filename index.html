@@ -447,7 +447,7 @@
 </button>
 
 <!-- Sessions Page -->
-<div id="page-sessions" class="page active">
+<div id="page-sessions" class="page">
   <div class="search-bar">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     <input class="search-input" id="session-search" placeholder="Search exercises…" oninput="filterSessions(this.value)">
@@ -474,14 +474,14 @@
 </div>
 
 <!-- Schedule Page -->
-<div id="page-schedule" class="page">
+<div id="page-schedule" class="page active">
   <div class="day-picker" id="day-picker"></div>
   <div id="schedule-container"></div>
 </div>
 
 <!-- Tab Bar -->
 <div class="tab-bar">
-  <button class="tab-btn active" onclick="showPage('sessions', this)">
+  <button class="tab-btn" onclick="showPage('sessions', this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     Sessions
   </button>
@@ -489,7 +489,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5h11"/><path d="M6.5 17.5h11"/><path d="M3 8.5v7"/><path d="M21 8.5v7"/><circle cx="3" cy="8.5" r="1.5"/><circle cx="21" cy="8.5" r="1.5"/><circle cx="3" cy="15.5" r="1.5"/><circle cx="21" cy="15.5" r="1.5"/></svg>
     Exercises
   </button>
-  <button class="tab-btn" onclick="showPage('schedule', this)">
+  <button class="tab-btn active" onclick="showPage('schedule', this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14" stroke-linecap="round" stroke-width="3"/><line x1="12" y1="14" x2="12" y2="14" stroke-linecap="round" stroke-width="3"/><line x1="16" y1="14" x2="16" y2="14" stroke-linecap="round" stroke-width="3"/></svg>
     Schedule
   </button>
@@ -587,7 +587,7 @@
     </div>
     <div class="form-group" style="margin-bottom:14px">
       <div class="ns-field-label">Category</div>
-      <select class="form-input" id="ae-cat">
+      <select class="form-input" id="ae-cat" onchange="updateAeScheduleSuggestion()">
         <option value="core">Core</option>
         <option value="glutes">Glutes</option>
         <option value="upper">Upper Body</option>
@@ -597,6 +597,13 @@
         <option value="mobility">Mobility</option>
         <option value="cardio">Cardio</option>
       </select>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <div class="ns-field-label">Add to Schedule Session</div>
+      <select class="form-input" id="ae-schedule">
+        <option value="">— None —</option>
+      </select>
+      <div id="ae-schedule-hint" style="font-size:11px;color:var(--text2);margin-top:5px"></div>
     </div>
     <div class="form-group" style="margin-bottom:20px">
       <div class="ns-field-label">Description <span style="color:var(--text2);font-weight:400">(optional)</span></div>
@@ -1352,10 +1359,49 @@ function setExCategory(cat) {
 function filterExercises() { renderExerciseGrid(); }
 
 // ── Add Exercise modal ────────────────────────────────────────────────────
+// Map category → template family letter
+const CAT_TO_SESSION = { glutes:'A', lower:'A', core:'B', upper:'B',
+                         full:'C', balance:'C', mobility:'C', cardio:'D' };
+
+function bestTemplateForCat(cat) {
+  const family = CAT_TO_SESSION[cat] || 'C';
+  // Find templates in this family (id starts with family letter), pick shorter one
+  const matches = schedConfig.templates
+    .map((t, i) => ({ t, i }))
+    .filter(({ t }) => t.id.startsWith(family));
+  if (!matches.length) return null;
+  matches.sort((a, b) => a.t.exercises.length - b.t.exercises.length);
+  return matches[0].i; // index of shortest matching template
+}
+
+function populateAeScheduleSelect(suggestedIdx) {
+  const sel = document.getElementById('ae-schedule');
+  sel.innerHTML = '<option value="">— None (library only) —</option>' +
+    schedConfig.templates.map((t, i) =>
+      `<option value="${i}">${t.label}</option>`
+    ).join('');
+  if (suggestedIdx !== null && suggestedIdx !== undefined) {
+    sel.value = String(suggestedIdx);
+  }
+}
+
+function updateAeScheduleSuggestion() {
+  const cat = document.getElementById('ae-cat').value;
+  const idx = bestTemplateForCat(cat);
+  populateAeScheduleSelect(idx);
+  const hint = document.getElementById('ae-schedule-hint');
+  if (idx !== null) {
+    hint.textContent = `Auto-matched based on category — change if needed`;
+  } else {
+    hint.textContent = '';
+  }
+}
+
 function openAddExercise() {
   document.getElementById('ae-name').value = '';
   document.getElementById('ae-cat').value = 'core';
   document.getElementById('ae-desc').value = '';
+  updateAeScheduleSuggestion();
   document.getElementById('add-ex-modal').classList.add('open');
   setTimeout(() => document.getElementById('ae-name').focus(), 300);
 }
@@ -1367,13 +1413,22 @@ function saveAddExercise() {
   if (!name) { document.getElementById('ae-name').focus(); return; }
   const cat  = document.getElementById('ae-cat').value;
   const desc = document.getElementById('ae-desc').value.trim();
-  // Pick an animation that matches the category (best-guess default)
+  const schedIdx = document.getElementById('ae-schedule').value;
   const animMap = { core:'plank', glutes:'bridge', upper:'row', lower:'squat',
                     full:'drive', balance:'balance', mobility:'stretch', cardio:'walk' };
   const newEx = { name, cat, desc: desc || `${name} exercise`, anim: animMap[cat] || 'activation', count: 0, custom: true };
   customExercises.push(newEx);
   localStorage.setItem('proResultsCustomExercises', JSON.stringify(customExercises));
   uniqueExercises = getUniqueExercises();
+
+  // Add to schedule template if one was chosen
+  if (schedIdx !== '') {
+    const idx = parseInt(schedIdx);
+    schedConfig.templates[idx].exercises.push({ name, sets: 3, reps: '10', weight: '' });
+    saveScheduleConfig(schedConfig);
+    renderSchedule();
+  }
+
   closeAddExercise();
   renderExerciseGrid();
 }
@@ -1381,6 +1436,14 @@ function deleteCustomExercise(name) {
   customExercises = customExercises.filter(e => e.name !== name);
   localStorage.setItem('proResultsCustomExercises', JSON.stringify(customExercises));
   uniqueExercises = getUniqueExercises();
+  // Also remove from any schedule templates it was added to
+  let schedChanged = false;
+  schedConfig.templates.forEach(t => {
+    const before = t.exercises.length;
+    t.exercises = t.exercises.filter(e => e.name !== name);
+    if (t.exercises.length !== before) schedChanged = true;
+  });
+  if (schedChanged) { saveScheduleConfig(schedConfig); renderSchedule(); }
   renderExerciseGrid();
 }
 document.getElementById('add-ex-modal').addEventListener('click', e => {
@@ -1632,6 +1695,30 @@ const DEFAULT_TEMPLATES = [
       { name: 'Staggered Cable Press',  sets: 3, reps: '10 each', weight: '' },
     ]
   },
+  // ── D1: Cardio & Conditioning — Power ───────────────────────────────────
+  {
+    id: 'D1', label: 'Cardio & Conditioning — Power',
+    exercises: [
+      { name: 'Hip/Kidney Activation',  sets: 1, reps: '2 min',   weight: '' },
+      { name: 'Sled Drive',             sets: 3, reps: '90 sec',  weight: '' },
+      { name: 'Cable Hip Throws',       sets: 3, reps: '12 each', weight: '' },
+      { name: 'Lateral Walks',          sets: 2, reps: '15',      weight: '15–25 lb' },
+      { name: 'Crawl',                  sets: 2, reps: '10 each', weight: '' },
+      { name: 'Marching Balance',       sets: 2, reps: '12 each', weight: '' },
+    ]
+  },
+  // ── D2: Cardio & Conditioning — Endurance ───────────────────────────────
+  {
+    id: 'D2', label: 'Cardio & Conditioning — Endurance',
+    exercises: [
+      { name: 'Physio Spine Stretch',   sets: 1, reps: '1 min',   weight: '' },
+      { name: 'Contra Balance Walks',   sets: 2, reps: '12 each', weight: '3–15 lb' },
+      { name: 'Lateral Crawl',          sets: 2, reps: '10 each', weight: '' },
+      { name: 'Step Downs & Reach',     sets: 2, reps: '10 each', weight: '' },
+      { name: 'Hinge up to Press up',   sets: 3, reps: '10 each', weight: '' },
+      { name: 'Cable Reach Squat',      sets: 3, reps: '9',       weight: '' },
+    ]
+  },
 ];
 
 function loadScheduleConfig() {
@@ -1639,7 +1726,7 @@ function loadScheduleConfig() {
   if (saved) {
     const cfg = JSON.parse(saved);
     // Migrate old 3-template configs to the new 6-template format
-    if (!cfg.templates || cfg.templates.length < 6) {
+    if (!cfg.templates || cfg.templates.length < 8) {
       return { days: cfg.days || [1, 3, 5], templates: JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)) };
     }
     return cfg;
@@ -1669,7 +1756,7 @@ function getMondayOf(dateStr) {
 function freezePastAndDone() {
   // Call BEFORE changing schedConfig so getScheduleWeeks uses the current days
   const today = new Date(); today.setHours(0,0,0,0);
-  const weeks = getScheduleWeeks(4);
+  const weeks = getScheduleWeeks();
   let changed = false;
   weeks.forEach(({ days }) => {
     days.forEach(({ dateStr: canonicalDate, templateIdx }) => {
@@ -1708,7 +1795,13 @@ function renderDayPicker() {
   ).join('');
 }
 
-function getScheduleWeeks(weeksAhead = 4) {
+function weeksUntilYearEnd() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yearEnd = new Date(today.getFullYear(), 11, 31); // Dec 31
+  return Math.ceil((yearEnd - today) / (7 * 86400000));
+}
+
+function getScheduleWeeks(weeksAhead = weeksUntilYearEnd()) {
   const today = new Date(); today.setHours(0,0,0,0);
   // find Monday of current week
   const startOfWeek = new Date(today);
@@ -1764,7 +1857,7 @@ function renderSchedule() {
   const allSlots = frozenSlots.map(f => ({ ...f, frozen: true }));
 
   // 2. Add freshly-generated slots, skipping any that are already frozen
-  const genWeeks = getScheduleWeeks(4);
+  const genWeeks = getScheduleWeeks();
   genWeeks.forEach(({ days }) => {
     days.forEach(({ dateStr: canonicalDate, templateIdx }) => {
       if (!frozenKeys.has(canonicalDate)) {
@@ -1888,7 +1981,7 @@ function toggleDone(dateStr) {
     // Freeze immediately on check-off so day changes won't move it
     if (!frozenSlots.some(f => f.canonicalDate === dateStr)) {
       // Find the templateIdx for this slot
-      const genWeeks = getScheduleWeeks(4);
+      const genWeeks = getScheduleWeeks();
       let tIdx = 0;
       genWeeks.forEach(({ days }) => days.forEach(d => { if (d.dateStr === dateStr) tIdx = d.templateIdx; }));
       frozenSlots.push({ canonicalDate: dateStr, templateIdx: tIdx });
@@ -2039,8 +2132,6 @@ renderExerciseGrid();
 renderStats();
 renderDayPicker();
 renderSchedule();
-// Show correct FAB for the default active tab (Sessions)
-document.getElementById('scan-fab').classList.remove('hidden');
 </script>
 </body>
 </html>
