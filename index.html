@@ -1,0 +1,2046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#0f0f14">
+  <title>My Training Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #0f0f14;
+      --surface: #1a1a24;
+      --surface2: #22222f;
+      --accent: #e8632a;
+      --accent2: #f5a623;
+      --text: #f0f0f5;
+      --text2: #a0a0b0;
+      --green: #4caf7d;
+      --border: #2e2e3f;
+      --radius: 14px;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      overscroll-behavior: none;
+    }
+
+    /* ── Top Nav ── */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,15,20,0.95);
+      backdrop-filter: blur(12px);
+      padding: 14px 20px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .nav-title span { color: var(--accent); }
+    .nav-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    /* ── Tab Bar ── */
+    .tab-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(15,15,20,0.97);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      display: flex;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 0 14px;
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.2s;
+    }
+    .tab-btn.active { color: var(--accent); }
+    .tab-btn svg { width: 20px; height: 20px; }
+
+    /* ── Pages ── */
+    .page { display: none; padding: 16px 16px 90px; }
+    .page.active { display: block; }
+
+    /* ── Section Labels ── */
+    .section-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--text2); margin: 20px 0 10px;
+    }
+    .section-label:first-child { margin-top: 4px; }
+
+    /* ── Session Cards ── */
+    .session-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+    .session-card.expanded { border-color: var(--accent); }
+    .session-header {
+      display: flex; align-items: center;
+      padding: 14px 16px;
+      cursor: pointer; user-select: none; gap: 12px;
+    }
+    .session-date-badge {
+      background: var(--accent); color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .session-meta { flex: 1; min-width: 0; }
+    .session-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .session-count { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .session-chevron { color: var(--text2); transition: transform 0.25s; flex-shrink: 0; }
+    .session-card.expanded .session-chevron { transform: rotate(180deg); }
+    .exercise-list { display: none; padding: 0 16px 14px; border-top: 1px solid var(--border); }
+    .session-card.expanded .exercise-list { display: block; }
+    .exercise-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .exercise-item:last-child { border-bottom: none; }
+    .exercise-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .exercise-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .tag { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
+    .tag-sets { background: rgba(232,99,42,0.15); color: var(--accent); }
+    .tag-reps { background: rgba(245,166,35,0.15); color: var(--accent2); }
+    .tag-weight { background: rgba(76,175,125,0.15); color: var(--green); }
+    .exercise-note { font-size: 12px; color: var(--text2); font-style: italic; }
+
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 16px; padding: 10px 12px; width: 100%; }
+    .form-input:focus { outline: none; border-color: var(--accent); }
+    select.form-input { -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a0a0b0' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+    textarea.form-input { font-family: inherit; }
+    .save-btn { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; padding: 14px; cursor: pointer; margin-top: 8px; }
+    .cancel-btn { width: 100%; background: none; border: none; color: var(--text2); font-size: 15px; padding: 12px; cursor: pointer; margin-top: 4px; }
+
+    /* ── Stats Page ── */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+    .stat-number { font-size: 36px; font-weight: 800; color: var(--accent); line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--text2); margin-top: 6px; font-weight: 500; }
+    .freq-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .exercise-freq-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .exercise-freq-row:last-child { border-bottom: none; }
+    .exercise-freq-name { font-size: 14px; font-weight: 500; }
+    .exercise-freq-bar-wrap { flex: 1; margin: 0 12px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .exercise-freq-bar { height: 100%; background: var(--accent); border-radius: 3px; }
+    .exercise-freq-count { font-size: 13px; font-weight: 700; color: var(--accent); min-width: 24px; text-align: right; }
+
+    /* ── Search Bar ── */
+    .search-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; padding: 0 12px; margin-bottom: 12px; gap: 8px; }
+    .search-bar svg { color: var(--text2); flex-shrink: 0; }
+    .search-input { background: none; border: none; color: var(--text); font-size: 16px; padding: 12px 0; width: 100%; }
+    .search-input::placeholder { color: var(--text2); }
+    .search-input:focus { outline: none; }
+
+    /* ── Exercise Library ── */
+    .ex-filter-row {
+      display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px;
+      padding-bottom: 4px; scrollbar-width: none;
+    }
+    .ex-filter-row::-webkit-scrollbar { display: none; }
+    .ex-chip {
+      flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text2); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .ex-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .ex-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .ex-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      cursor: pointer; transition: border-color 0.2s;
+    }
+    .ex-card:active { border-color: var(--accent); }
+
+    .ex-anim-box {
+      height: 100px;
+      background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative;
+    }
+    .ex-anim-box svg {
+      width: 80px; height: 80px;
+    }
+
+    .ex-card-body { padding: 10px 12px 12px; }
+    .ex-card-name { font-size: 13px; font-weight: 700; line-height: 1.3; margin-bottom: 5px; }
+    .ex-card-desc { font-size: 11px; color: var(--text2); line-height: 1.4; margin-bottom: 8px; }
+    .ex-card-meta { display: flex; align-items: center; justify-content: space-between; }
+    .ex-cat-badge {
+      font-size: 10px; font-weight: 600; padding: 2px 7px;
+      border-radius: 5px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .cat-core     { background: rgba(100,120,220,0.18); color: #8899ff; }
+    .cat-glutes   { background: rgba(232,99,42,0.18); color: var(--accent); }
+    .cat-upper    { background: rgba(76,175,125,0.18); color: var(--green); }
+    .cat-lower    { background: rgba(245,166,35,0.18); color: var(--accent2); }
+    .cat-full     { background: rgba(200,100,200,0.18); color: #cc88ff; }
+    .cat-mobility { background: rgba(100,200,220,0.18); color: #66ddee; }
+    .cat-balance  { background: rgba(220,180,100,0.18); color: #ddaa44; }
+    .cat-cardio   { background: rgba(220,80,80,0.18); color: #ff6666; }
+
+    .ex-count-badge {
+      font-size: 10px; font-weight: 700; color: var(--text2);
+    }
+
+    /* ── Figure Animations ── */
+    .fig { stroke-linecap: round; stroke-linejoin: round; }
+
+    /* existing */
+    @keyframes fig-bridge    { 0%,100%{transform:translateY(6px)}  50%{transform:translateY(-10px)} }
+    @keyframes fig-row       { 0%,100%{transform:rotate(25deg) translateX(4px)}  50%{transform:rotate(-20deg) translateX(-8px)} }
+    @keyframes fig-squat     { 0%,100%{transform:translateY(0) scaleY(1)} 50%{transform:translateY(12px) scaleY(0.72)} }
+    @keyframes fig-hang      { 0%,100%{transform:rotate(-11deg)} 50%{transform:rotate(11deg)} }
+    @keyframes fig-hinge     { 0%,100%{transform:rotate(0deg)}  50%{transform:rotate(52deg)} }
+    @keyframes fig-lunge     { 0%,100%{transform:translateY(0)}  50%{transform:translateY(11px)} }
+    @keyframes fig-drive     { 0%,100%{transform:translateX(0) rotate(-3deg)} 50%{transform:translateX(11px) rotate(-14deg)} }
+    @keyframes fig-pulse     { 0%,100%{r:7;opacity:1} 50%{r:14;opacity:0.25} }
+    @keyframes fig-roll      { 0%{transform:rotate(0deg) translateX(-12px)} 100%{transform:rotate(360deg) translateX(12px)} }
+    /* lateral walk */
+    @keyframes fig-walk-leg  { 0%,100%{transform:translateX(-9px)} 50%{transform:translateX(9px)} }
+    /* quadruped float — arm lifts up */
+    @keyframes fig-float     { 0%,100%{transform:rotate(0deg)}  50%{transform:rotate(-45deg)} }
+    /* crawl shifts body laterally */
+    @keyframes fig-crawl     { 0%,100%{transform:translateX(-7px)} 50%{transform:translateX(7px)} }
+    /* plank spine pulse */
+    @keyframes fig-plank     { 0%,100%{opacity:1} 50%{opacity:0.35} }
+    /* stretch — arms spread wide */
+    @keyframes fig-stretch   { 0%,100%{transform:scaleX(0.6)} 50%{transform:scaleX(1.4)} }
+    /* rotation — torso twists */
+    @keyframes fig-rotate    { 0%,100%{transform:rotate(-30deg)} 50%{transform:rotate(30deg)} }
+    /* new accurate types */
+    @keyframes fig-deadbug-arm { 0%,100%{transform:rotate(0deg)}   50%{transform:rotate(-150deg)} }
+    @keyframes fig-deadbug-leg { 0%,100%{transform:rotate(0deg)}   50%{transform:rotate(70deg)} }
+    @keyframes fig-prone-ext   { 0%,100%{transform:rotate(0deg)}   50%{transform:rotate(-40deg)} }
+    @keyframes fig-step-back   { 0%,100%{transform:rotate(0deg)}   50%{transform:rotate(-70deg)} }
+    @keyframes fig-pushup      { 0%,100%{transform:translateY(0)}  50%{transform:translateY(12px)} }
+    @keyframes fig-march       { 0%,100%{transform:rotate(0deg)}   50%{transform:rotate(-80deg)} }
+    @keyframes fig-lying-rot   { 0%,100%{transform:rotate(-40deg)} 50%{transform:rotate(40deg)} }
+    @keyframes fig-sword       { 0%,100%{transform:rotate(60deg) translateX(0)}  50%{transform:rotate(-30deg) translateX(-8px)} }
+    @keyframes fig-anti-rot    { 0%,100%{transform:translateX(0)}  50%{transform:translateX(14px)} }
+    @keyframes fig-clock       { 0%{transform:rotate(-120deg)} 33%{transform:rotate(0deg)} 66%{transform:rotate(120deg)} 100%{transform:rotate(-120deg)} }
+    @keyframes fig-rollout     { 0%,100%{transform:translateX(0) rotate(0deg)} 50%{transform:translateX(18px) rotate(-25deg)} }
+    @keyframes fig-hip-throw   { 0%,100%{transform:rotate(-20deg)} 50%{transform:rotate(35deg)} }
+    @keyframes fig-seated-row  { 0%,100%{transform:rotate(15deg) translateX(6px)}  50%{transform:rotate(-10deg) translateX(-10px)} }
+    @keyframes fig-trap        { 0%,100%{transform:rotate(-15deg)} 50%{transform:rotate(15deg)} }
+
+    ::-webkit-scrollbar { width: 0; }
+
+    /* ── Scan FAB ── */
+    .scan-fab {
+      position: fixed; bottom: 90px; right: 18px; z-index: 90;
+      width: 54px; height: 54px; border-radius: 50%;
+      background: var(--accent); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 22px rgba(232,99,42,0.55);
+      transition: transform 0.15s, opacity 0.2s;
+    }
+    .scan-fab:active { transform: scale(0.91); }
+    .scan-fab.hidden { opacity: 0; pointer-events: none; }
+
+    /* ── New Session Sheet ── */
+    .new-sess-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+      align-items: flex-end; justify-content: center;
+    }
+    .new-sess-overlay.open { display: flex; }
+    .new-sess-sheet {
+      background: var(--surface); border-radius: 20px 20px 0 0;
+      padding: 16px 20px 44px; width: 100%; max-width: 500px;
+      max-height: 92vh; overflow-y: auto;
+      animation: slideUp 0.25s ease;
+    }
+    .new-sess-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .new-sess-close {
+      background: none; border: none; color: var(--text2);
+      font-size: 26px; cursor: pointer; padding: 2px 6px; line-height: 1;
+    }
+
+    /* ── Scan Zone ── */
+    .scan-zone {
+      border: 2px dashed var(--border); border-radius: 14px;
+      padding: 18px 12px; text-align: center; margin-bottom: 14px;
+      cursor: pointer; transition: border-color 0.2s;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .scan-zone:active { border-color: var(--accent); }
+    .scan-zone svg { color: var(--accent); }
+    .scan-zone-title { font-size: 14px; font-weight: 700; }
+    .scan-zone-sub { font-size: 12px; color: var(--text2); }
+    .scan-preview-img {
+      width: 100%; border-radius: 12px; margin-bottom: 14px;
+      max-height: 230px; object-fit: contain;
+      background: var(--surface2); display: none;
+    }
+
+    /* ── Exercise Rows ── */
+    .ex-entry-row {
+      background: var(--surface2); border-radius: 12px;
+      padding: 12px 12px 12px; margin-bottom: 10px; position: relative;
+    }
+    .ex-entry-name { width: 100%; margin-bottom: 8px; }
+    .ex-entry-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .ex-entry-remove {
+      position: absolute; top: 8px; right: 8px;
+      background: none; border: none; color: var(--text2);
+      font-size: 17px; cursor: pointer; line-height: 1; padding: 2px 5px;
+    }
+    .add-ex-btn {
+      width: 100%; background: none; border: 1px dashed var(--border);
+      border-radius: 12px; color: var(--text2); font-size: 14px; font-weight: 600;
+      padding: 12px; cursor: pointer; margin-bottom: 14px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .add-ex-btn:active { border-color: var(--accent); color: var(--accent); }
+    .ns-field-label {
+      font-size: 11px; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;
+    }
+
+    /* ── Schedule Page ── */
+    .day-picker { display: flex; gap: 6px; margin-bottom: 18px; }
+    .day-pill {
+      flex: 1; padding: 9px 0; border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text2); font-size: 11px; font-weight: 700;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+      user-select: none;
+    }
+    .day-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Exercise name autocomplete dropdown ── */
+    .ex-name-wrap { position: relative; margin-bottom: 8px; }
+    .ex-dropdown {
+      position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 400;
+      background: var(--surface); border: 1px solid var(--accent);
+      border-radius: 10px; overflow: hidden;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+      max-height: 210px; overflow-y: auto;
+    }
+    .ex-dropdown-item {
+      padding: 11px 14px; font-size: 14px; cursor: pointer;
+      border-bottom: 1px solid var(--border); display: flex;
+      align-items: center; gap: 8px;
+    }
+    .ex-dropdown-item:last-child { border-bottom: none; }
+    .ex-dropdown-item:active, .ex-dropdown-item.hover { background: var(--surface2); }
+    .ex-dropdown-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+    .week-label {
+      font-size: 11px; font-weight: 700; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin: 20px 0 8px;
+    }
+    .week-label:first-of-type { margin-top: 4px; }
+
+    .sched-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 10px; overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .sched-card.done { border-color: var(--green); }
+    .sched-card.today { border-color: var(--accent); }
+    .sched-card.past { opacity: 0.55; }
+
+    .sched-card-header {
+      display: flex; align-items: center; padding: 12px 14px; gap: 12px;
+      cursor: pointer; user-select: none;
+    }
+    .sched-date-badge {
+      background: var(--surface2); border-radius: 10px;
+      padding: 5px 10px; text-align: center; flex-shrink: 0; min-width: 50px;
+    }
+    .sched-card.done .sched-date-badge { background: rgba(76,175,125,0.15); }
+    .sched-card.today .sched-date-badge { background: rgba(232,99,42,0.15); }
+    .sched-date-dow { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+    .sched-date-num { font-size: 22px; font-weight: 800; line-height: 1.1; }
+    .sched-card.done .sched-date-num { color: var(--green); }
+    .sched-card.today .sched-date-num { color: var(--accent); }
+
+    .sched-card-meta { flex: 1; min-width: 0; }
+    .sched-session-label { font-size: 14px; font-weight: 700; }
+    .sched-session-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    .sched-check-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 2px solid var(--border); background: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.2s;
+      color: var(--text2);
+    }
+    .sched-check-btn.done { background: var(--green); border-color: var(--green); color: #fff; }
+
+    .sched-card-body { display: none; border-top: 1px solid var(--border); padding: 0 14px 12px; }
+    .sched-card.open .sched-card-body { display: block; }
+    .sched-chevron { color: var(--text2); transition: transform 0.22s; flex-shrink: 0; }
+    .sched-card.open .sched-chevron { transform: rotate(180deg); }
+
+    .sched-ex-item {
+      display: flex; align-items: center; padding: 9px 0;
+      border-bottom: 1px solid var(--border); gap: 10px;
+    }
+    .sched-ex-item:last-child { border-bottom: none; }
+    .sched-ex-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .sched-ex-name { flex: 1; font-size: 14px; font-weight: 500; }
+    .sched-ex-meta { font-size: 12px; color: var(--text2); white-space: nowrap; }
+
+    .sched-card-footer {
+      padding: 2px 14px 12px; display: flex; justify-content: flex-end; gap: 8px;
+    }
+    .sched-rescheduled-badge {
+      font-size: 10px; font-weight: 700; color: var(--accent2);
+      background: rgba(245,166,35,0.12); border-radius: 5px;
+      padding: 2px 7px; align-self: center; margin-right: auto;
+    }
+    .sched-edit-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text2); font-size: 12px; font-weight: 600;
+      padding: 6px 14px; border-radius: 8px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .sched-edit-btn:active { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="nav-title">Pro<span>Results</span> Training</div>
+  <div class="nav-sub">Personal Training Journal</div>
+</div>
+
+<!-- Session FAB (visible only on Sessions tab) -->
+<button class="scan-fab hidden" id="scan-fab" onclick="openNewSession()" aria-label="Add session">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+<!-- Exercise FAB (visible only on Exercises tab) -->
+<button class="scan-fab hidden" id="ex-fab" onclick="openAddExercise()" aria-label="Add exercise">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<!-- Sessions Page -->
+<div id="page-sessions" class="page active">
+  <div class="search-bar">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="session-search" placeholder="Search exercises…" oninput="filterSessions(this.value)">
+  </div>
+  <div id="sessions-container"></div>
+</div>
+
+<!-- Exercises Page -->
+<div id="page-exercises" class="page">
+  <div class="search-bar">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="ex-search" placeholder="Search exercises…" oninput="filterExercises()">
+  </div>
+  <div class="ex-filter-row" id="ex-chips"></div>
+  <div class="ex-grid" id="ex-grid"></div>
+</div>
+
+<!-- Stats Page -->
+<div id="page-stats" class="page">
+  <p class="section-label">Overview</p>
+  <div class="stats-grid" id="stats-grid"></div>
+  <p class="section-label">Most Frequent Exercises</p>
+  <div class="freq-card" id="freq-container"></div>
+</div>
+
+<!-- Schedule Page -->
+<div id="page-schedule" class="page">
+  <div class="day-picker" id="day-picker"></div>
+  <div id="schedule-container"></div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showPage('sessions', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Sessions
+  </button>
+  <button class="tab-btn" onclick="showPage('exercises', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5h11"/><path d="M6.5 17.5h11"/><path d="M3 8.5v7"/><path d="M21 8.5v7"/><circle cx="3" cy="8.5" r="1.5"/><circle cx="21" cy="8.5" r="1.5"/><circle cx="3" cy="15.5" r="1.5"/><circle cx="21" cy="15.5" r="1.5"/></svg>
+    Exercises
+  </button>
+  <button class="tab-btn" onclick="showPage('schedule', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14" stroke-linecap="round" stroke-width="3"/><line x1="12" y1="14" x2="12" y2="14" stroke-linecap="round" stroke-width="3"/><line x1="16" y1="14" x2="16" y2="14" stroke-linecap="round" stroke-width="3"/></svg>
+    Schedule
+  </button>
+  <button class="tab-btn" onclick="showPage('stats', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Progress
+  </button>
+</div>
+
+<!-- Reschedule Modal -->
+<div class="new-sess-overlay" id="reschedule-modal">
+  <div class="new-sess-sheet" style="padding-bottom:32px">
+    <div class="modal-handle"></div>
+    <div class="new-sess-header">
+      <div class="modal-title" style="margin:0">Change Date</div>
+      <button class="new-sess-close" onclick="closeReschedule()">×</button>
+    </div>
+    <div class="ns-field-label" style="margin-bottom:6px" id="reschedule-original-label"></div>
+    <input class="form-input" id="reschedule-date-input" type="date" style="margin-bottom:16px">
+    <button class="save-btn" onclick="saveReschedule()">Confirm Date</button>
+    <button class="cancel-btn" onclick="clearReschedule()">Reset to Default</button>
+  </div>
+</div>
+
+<!-- Schedule Edit Modal -->
+<div class="new-sess-overlay" id="sched-edit-modal">
+  <div class="new-sess-sheet">
+    <div class="modal-handle"></div>
+    <div class="new-sess-header">
+      <div class="modal-title" style="margin:0" id="sched-edit-title">Edit Session</div>
+      <button class="new-sess-close" onclick="closeSchedEdit()">×</button>
+    </div>
+    <div class="ns-field-label" style="margin-bottom:8px">Exercises</div>
+    <div id="sched-edit-rows"></div>
+    <button class="add-ex-btn" onclick="addSchedExRow()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Exercise
+    </button>
+    <button class="save-btn" onclick="saveSchedEdit()">Save Changes</button>
+    <button class="cancel-btn" onclick="closeSchedEdit()">Cancel</button>
+  </div>
+</div>
+
+<!-- New Session Modal -->
+<div class="new-sess-overlay" id="new-sess-modal">
+  <div class="new-sess-sheet">
+    <div class="modal-handle"></div>
+    <div class="new-sess-header">
+      <div class="modal-title" style="margin:0">Add Session</div>
+      <button class="new-sess-close" onclick="closeNewSession()">×</button>
+    </div>
+
+    <!-- Camera / upload -->
+    <div class="scan-zone" onclick="document.getElementById('scan-file-input').click()">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+        <circle cx="12" cy="13" r="3"/>
+      </svg>
+      <div class="scan-zone-title">Scan Journal Page</div>
+      <div class="scan-zone-sub">Tap to take a photo or choose from library</div>
+    </div>
+    <input type="file" id="scan-file-input" accept="image/*" capture="environment" style="display:none" onchange="handleScanFile(this)">
+    <img id="scan-preview-img" class="scan-preview-img" alt="Scanned page">
+
+    <!-- Date -->
+    <div class="form-group" style="margin-bottom:14px">
+      <div class="ns-field-label">Session Date</div>
+      <input class="form-input" id="ns-date" type="date">
+    </div>
+
+    <!-- Exercises -->
+    <div class="ns-field-label" style="margin-bottom:8px">Exercises</div>
+    <div id="ns-ex-rows"></div>
+    <button class="add-ex-btn" onclick="addExRow()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Exercise
+    </button>
+
+    <button class="save-btn" onclick="saveNewSession()">Save Session</button>
+    <button class="cancel-btn" onclick="closeNewSession()">Cancel</button>
+  </div>
+</div>
+
+<!-- Add Exercise Modal -->
+<div class="new-sess-overlay" id="add-ex-modal">
+  <div class="new-sess-sheet" style="padding-bottom:32px">
+    <div class="modal-handle"></div>
+    <div class="new-sess-header">
+      <div class="modal-title" style="margin:0">Add Exercise</div>
+      <button class="new-sess-close" onclick="closeAddExercise()">×</button>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <div class="ns-field-label">Exercise Name</div>
+      <input class="form-input" id="ae-name" type="text" placeholder="e.g. Nordic Curl">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <div class="ns-field-label">Category</div>
+      <select class="form-input" id="ae-cat">
+        <option value="core">Core</option>
+        <option value="glutes">Glutes</option>
+        <option value="upper">Upper Body</option>
+        <option value="lower">Lower Body</option>
+        <option value="full">Full Body</option>
+        <option value="balance">Balance</option>
+        <option value="mobility">Mobility</option>
+        <option value="cardio">Cardio</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:20px">
+      <div class="ns-field-label">Description <span style="color:var(--text2);font-weight:400">(optional)</span></div>
+      <textarea class="form-input" id="ae-desc" rows="3" placeholder="Brief description of the exercise…" style="resize:none;line-height:1.5"></textarea>
+    </div>
+    <button class="save-btn" onclick="saveAddExercise()">Add to Library</button>
+    <button class="cancel-btn" onclick="closeAddExercise()">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// ANIMATION SVGs
+// ─────────────────────────────────────────────────────────────
+const S = '#a0a0b0'; // body stroke
+const A = '#e8632a'; // accent
+const B = '#2e2e3f'; // border/ground
+const W = 3.5;       // stroke width
+
+const animSvgs = {
+
+  // ── Supine bridge: head at right, hips lift ──
+  bridge: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="80" x2="95" y2="80" stroke="${B}" stroke-width="2"/>
+    <circle cx="82" cy="68" r="7" fill="${A}" stroke="none"/>
+    <line x1="75" y1="70" x2="60" y2="72" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-bridge 1.8s ease-in-out infinite;transform-origin:60px 72px">
+      <line x1="60" y1="72" x2="36" y2="55" stroke="${A}" stroke-width="4.5"/>
+      <line x1="36" y1="55" x2="26" y2="80" stroke="${S}" stroke-width="${W}"/>
+      <line x1="36" y1="55" x2="50" y2="80" stroke="${S}" stroke-width="${W}"/>
+    </g>
+    <line x1="72" y1="72" x2="72" y2="79" stroke="${S}" stroke-width="${W}"/>
+  </svg>`,
+
+  // ── Deadbug: supine, opposite arm overhead + leg extends ──
+  deadbug: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="72" x2="95" y2="72" stroke="${B}" stroke-width="2"/>
+    <circle cx="82" cy="58" r="7" fill="${A}" stroke="none"/>
+    <line x1="75" y1="60" x2="55" y2="62" stroke="${S}" stroke-width="${W}"/>
+    <line x1="55" y1="62" x2="42" y2="62" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-deadbug-arm 2s ease-in-out infinite;transform-origin:72px 62px">
+      <line x1="72" y1="62" x2="72" y2="40" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="72" cy="37" r="4" fill="${A}" stroke="none"/>
+    </g>
+    <line x1="42" y1="62" x2="35" y2="50" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-deadbug-leg 2s ease-in-out infinite;transform-origin:42px 62px">
+      <line x1="42" y1="62" x2="22" y2="68" stroke="${A}" stroke-width="4.5"/>
+    </g>
+    <line x1="42" y1="62" x2="30" y2="72" stroke="${S}" stroke-width="${W}"/>
+  </svg>`,
+
+  // ── Prone extension (McKenzie/Cobra): face-down, upper body lifts ──
+  prone_ext: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="72" x2="95" y2="72" stroke="${B}" stroke-width="2"/>
+    <line x1="40" y1="68" x2="75" y2="68" stroke="${S}" stroke-width="${W}"/>
+    <line x1="40" y1="68" x2="28" y2="72" stroke="${S}" stroke-width="${W}"/>
+    <line x1="55" y1="68" x2="50" y2="72" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-prone-ext 2s ease-in-out infinite;transform-origin:40px 68px">
+      <line x1="40" y1="68" x2="20" y2="60" stroke="${S}" stroke-width="${W}"/>
+      <circle cx="13" cy="57" r="7" fill="${A}" stroke="none"/>
+      <line x1="30" y1="64" x2="18" y2="52" stroke="${A}" stroke-width="4"/>
+      <line x1="30" y1="64" x2="42" y2="52" stroke="${A}" stroke-width="4"/>
+    </g>
+  </svg>`,
+
+  // ── Quadruped float: one arm extends forward ──
+  float: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="70" x2="95" y2="70" stroke="${B}" stroke-width="2"/>
+    <circle cx="30" cy="38" r="7" fill="${A}" stroke="none"/>
+    <line x1="30" y1="45" x2="68" y2="45" stroke="${S}" stroke-width="${W}"/>
+    <line x1="36" y1="45" x2="36" y2="70" stroke="${S}" stroke-width="${W}"/>
+    <line x1="62" y1="45" x2="55" y2="70" stroke="${S}" stroke-width="${W}"/>
+    <line x1="62" y1="45" x2="70" y2="70" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-float 1.8s ease-in-out infinite;transform-origin:24px 45px">
+      <line x1="24" y1="45" x2="8" y2="45" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="5" cy="45" r="4" fill="${A}" stroke="none"/>
+    </g>
+  </svg>`,
+
+  // ── All 4's step back: quadruped, leg extends behind ──
+  step_back: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="70" x2="95" y2="70" stroke="${B}" stroke-width="2"/>
+    <circle cx="28" cy="36" r="7" fill="${A}" stroke="none"/>
+    <line x1="28" y1="43" x2="66" y2="43" stroke="${S}" stroke-width="${W}"/>
+    <line x1="34" y1="43" x2="34" y2="70" stroke="${S}" stroke-width="${W}"/>
+    <line x1="22" y1="43" x2="22" y2="70" stroke="${S}" stroke-width="${W}"/>
+    <line x1="60" y1="43" x2="52" y2="70" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-step-back 2s ease-in-out infinite;transform-origin:66px 43px">
+      <line x1="66" y1="43" x2="90" y2="38" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="93" cy="37" r="4" fill="${A}" stroke="none"/>
+    </g>
+  </svg>`,
+
+  // ── Standard cable/hinge row: bent-over pull ──
+  row: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="28" cy="22" r="8" fill="${A}" stroke="none"/>
+    <line x1="28" y1="30" x2="52" y2="50" stroke="${S}" stroke-width="${W}"/>
+    <line x1="52" y1="50" x2="44" y2="78" stroke="${S}" stroke-width="${W}"/>
+    <line x1="52" y1="50" x2="62" y2="78" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-row 1.6s ease-in-out infinite;transform-origin:36px 36px">
+      <line x1="36" y1="36" x2="74" y2="44" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="76" cy="45" r="4" fill="${A}" stroke="none"/>
+    </g>
+    <line x1="36" y1="36" x2="22" y2="56" stroke="${S}" stroke-width="${W}"/>
+    <line x1="5" y1="80" x2="95" y2="80" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Seated low row: seated upright, arms pull ──
+  seated_row: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="72" x2="60" y2="72" stroke="${B}" stroke-width="2"/>
+    <circle cx="32" cy="28" r="8" fill="${A}" stroke="none"/>
+    <line x1="32" y1="36" x2="32" y2="60" stroke="${S}" stroke-width="${W}"/>
+    <line x1="32" y1="60" x2="20" y2="72" stroke="${S}" stroke-width="${W}"/>
+    <line x1="32" y1="60" x2="44" y2="72" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-seated-row 1.6s ease-in-out infinite;transform-origin:32px 44px">
+      <line x1="32" y1="44" x2="72" y2="50" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="74" cy="51" r="4" fill="${A}" stroke="none"/>
+    </g>
+    <line x1="32" y1="44" x2="16" y2="52" stroke="${S}" stroke-width="${W}"/>
+  </svg>`,
+
+  // ── Push-up / Ecc press-up: body lowers down ──
+  pushup: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="72" x2="95" y2="72" stroke="${B}" stroke-width="2"/>
+    <circle cx="18" cy="40" r="7" fill="${A}" stroke="none"/>
+    <line x1="18" y1="47" x2="80" y2="47" stroke="${S}" stroke-width="${W}"/>
+    <line x1="75" y1="47" x2="78" y2="72" stroke="${S}" stroke-width="${W}"/>
+    <line x1="70" y1="47" x2="73" y2="72" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-pushup 1.8s ease-in-out infinite;transform-origin:24px 47px">
+      <line x1="24" y1="47" x2="22" y2="65" stroke="${A}" stroke-width="4.5"/>
+      <line x1="24" y1="47" x2="38" y2="65" stroke="${A}" stroke-width="4.5"/>
+    </g>
+  </svg>`,
+
+  // ── Lateral band walk: side-step ──
+  walk: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="50" cy="18" r="8" fill="${A}" stroke="none"/>
+    <line x1="50" y1="26" x2="50" y2="54" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="36" x2="32" y2="48" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="36" x2="68" y2="48" stroke="${A}" stroke-width="${W}"/>
+    <g style="animation:fig-walk-leg 1.2s ease-in-out infinite;transform-origin:50px 54px">
+      <line x1="50" y1="54" x2="36" y2="78" stroke="${A}" stroke-width="${W}"/>
+      <line x1="50" y1="54" x2="64" y2="78" stroke="${S}" stroke-width="${W}"/>
+    </g>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Quadruped crawl: body shifts side to side ──
+  crawl: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g style="animation:fig-crawl 1.4s ease-in-out infinite;transform-origin:50px 47px">
+      <circle cx="28" cy="38" r="7" fill="${A}" stroke="none"/>
+      <line x1="28" y1="45" x2="68" y2="45" stroke="${S}" stroke-width="${W}"/>
+      <line x1="34" y1="45" x2="26" y2="66" stroke="${S}" stroke-width="${W}"/>
+      <line x1="34" y1="45" x2="16" y2="66" stroke="${A}" stroke-width="${W}"/>
+      <line x1="62" y1="45" x2="72" y2="66" stroke="${S}" stroke-width="${W}"/>
+      <line x1="62" y1="45" x2="58" y2="66" stroke="${A}" stroke-width="${W}"/>
+    </g>
+    <line x1="5" y1="68" x2="95" y2="68" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Forearm plank: horizontal body ──
+  plank: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="16" cy="44" r="7" fill="${A}" stroke="none"/>
+    <line x1="16" y1="51" x2="82" y2="51" stroke="${S}" stroke-width="${W}"/>
+    <line x1="23" y1="51" x2="20" y2="64" stroke="${S}" stroke-width="${W}"/>
+    <line x1="30" y1="51" x2="27" y2="64" stroke="${S}" stroke-width="${W}"/>
+    <line x1="76" y1="51" x2="78" y2="64" stroke="${S}" stroke-width="${W}"/>
+    <line x1="82" y1="51" x2="84" y2="64" stroke="${S}" stroke-width="${W}"/>
+    <line x1="32" y1="51" x2="70" y2="51" stroke="${A}" stroke-width="5" style="animation:fig-plank 1.8s ease-in-out infinite"/>
+    <line x1="5" y1="66" x2="95" y2="66" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Squat: upper body dips and rises ──
+  squat: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g style="animation:fig-squat 1.8s ease-in-out infinite;transform-origin:50px 42px">
+      <circle cx="50" cy="14" r="8" fill="${A}" stroke="none"/>
+      <line x1="50" y1="22" x2="50" y2="46" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="32" x2="28" y2="44" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="32" x2="72" y2="44" stroke="${A}" stroke-width="${W}"/>
+    </g>
+    <line x1="42" y1="54" x2="34" y2="78" stroke="${S}" stroke-width="${W}"/>
+    <line x1="58" y1="54" x2="66" y2="78" stroke="${S}" stroke-width="${W}"/>
+    <line x1="5" y1="80" x2="95" y2="80" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── TRX hang: suspended from bar ──
+  hang: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="10" y1="10" x2="90" y2="10" stroke="${S}" stroke-width="4"/>
+    <g style="animation:fig-hang 2s ease-in-out infinite;transform-origin:50px 10px">
+      <line x1="50" y1="10" x2="44" y2="26" stroke="${A}" stroke-width="${W}"/>
+      <line x1="50" y1="10" x2="56" y2="26" stroke="${A}" stroke-width="${W}"/>
+      <circle cx="50" cy="33" r="8" fill="${A}" stroke="none"/>
+      <line x1="50" y1="41" x2="50" y2="63" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="63" x2="40" y2="82" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="63" x2="60" y2="82" stroke="${S}" stroke-width="${W}"/>
+    </g>
+  </svg>`,
+
+  // ── Hip hinge: torso pivots forward from hips ──
+  hinge: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="50" y1="55" x2="40" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="55" x2="60" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-hinge 2s ease-in-out infinite;transform-origin:50px 55px">
+      <line x1="50" y1="55" x2="50" y2="25" stroke="${S}" stroke-width="${W}"/>
+      <circle cx="50" cy="17" r="8" fill="${A}" stroke="none"/>
+      <line x1="50" y1="38" x2="30" y2="50" stroke="${A}" stroke-width="4"/>
+      <line x1="50" y1="38" x2="70" y2="50" stroke="${A}" stroke-width="4"/>
+    </g>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Reverse lunge: front knee drops ──
+  lunge: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="40" cy="16" r="8" fill="${A}" stroke="none"/>
+    <line x1="40" y1="24" x2="40" y2="50" stroke="${S}" stroke-width="${W}"/>
+    <line x1="40" y1="34" x2="24" y2="46" stroke="${S}" stroke-width="${W}"/>
+    <line x1="40" y1="34" x2="56" y2="46" stroke="${A}" stroke-width="${W}"/>
+    <g style="animation:fig-lunge 1.8s ease-in-out infinite;transform-origin:40px 50px">
+      <line x1="40" y1="50" x2="22" y2="70" stroke="${A}" stroke-width="4.5"/>
+    </g>
+    <line x1="40" y1="50" x2="60" y2="65" stroke="${S}" stroke-width="${W}"/>
+    <line x1="60" y1="65" x2="62" y2="82" stroke="${S}" stroke-width="${W}"/>
+    <line x1="22" y1="70" x2="20" y2="82" stroke="${S}" stroke-width="${W}"/>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Marching balance: single-leg, knee drives up ──
+  march: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="50" cy="16" r="8" fill="${A}" stroke="none"/>
+    <line x1="50" y1="24" x2="50" y2="54" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="34" x2="32" y2="46" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="34" x2="68" y2="46" stroke="${A}" stroke-width="${W}"/>
+    <line x1="50" y1="54" x2="50" y2="82" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-march 1.4s ease-in-out infinite;transform-origin:50px 54px">
+      <line x1="50" y1="54" x2="62" y2="68" stroke="${A}" stroke-width="4.5"/>
+      <line x1="62" y1="68" x2="58" y2="82" stroke="${A}" stroke-width="${W}"/>
+    </g>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Lying T-rotation: supine leg-up spinal rotation ──
+  lying_rot: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="68" x2="95" y2="68" stroke="${B}" stroke-width="2"/>
+    <circle cx="78" cy="54" r="7" fill="${A}" stroke="none"/>
+    <line x1="71" y1="56" x2="44" y2="58" stroke="${S}" stroke-width="${W}"/>
+    <line x1="58" y1="58" x2="58" y2="68" stroke="${S}" stroke-width="${W}"/>
+    <line x1="44" y1="58" x2="36" y2="68" stroke="${S}" stroke-width="${W}"/>
+    <line x1="70" y1="58" x2="70" y2="68" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-lying-rot 2s ease-in-out infinite;transform-origin:58px 46px">
+      <line x1="58" y1="46" x2="40" y2="36" stroke="${A}" stroke-width="4.5"/>
+      <line x1="58" y1="46" x2="76" y2="36" stroke="${A}" stroke-width="4.5"/>
+    </g>
+    <line x1="44" y1="46" x2="44" y2="34" stroke="${A}" stroke-width="4.5" style="animation:fig-lying-rot 2s ease-in-out infinite;transform-origin:44px 58px"/>
+  </svg>`,
+
+  // ── Sword pull: diagonal cable low-to-high ──
+  sword_pull: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="36" cy="18" r="8" fill="${A}" stroke="none"/>
+    <line x1="36" y1="26" x2="36" y2="56" stroke="${S}" stroke-width="${W}"/>
+    <line x1="36" y1="56" x2="24" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="36" y1="56" x2="48" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+    <g style="animation:fig-sword 1.8s ease-in-out infinite;transform-origin:36px 36px">
+      <line x1="36" y1="36" x2="70" y2="12" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="73" cy="10" r="4" fill="${A}" stroke="none"/>
+    </g>
+    <line x1="36" y1="36" x2="18" y2="50" stroke="${S}" stroke-width="${W}"/>
+  </svg>`,
+
+  // ── Pallof / anti-rotation cable press ──
+  anti_rot: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="8" y1="10" x2="8" y2="80" stroke="${B}" stroke-width="3" stroke-dasharray="4 3"/>
+    <circle cx="38" cy="18" r="8" fill="${A}" stroke="none"/>
+    <line x1="38" y1="26" x2="38" y2="56" stroke="${S}" stroke-width="${W}"/>
+    <line x1="38" y1="56" x2="28" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="38" y1="56" x2="48" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="5" y1="82" x2="75" y2="82" stroke="${B}" stroke-width="2"/>
+    <line x1="8" y1="38" x2="38" y2="38" stroke="${S}" stroke-width="2" stroke-dasharray="3 2"/>
+    <g style="animation:fig-anti-rot 1.8s ease-in-out infinite;transform-origin:38px 38px">
+      <line x1="38" y1="38" x2="72" y2="38" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="74" cy="38" r="4" fill="${A}" stroke="none"/>
+    </g>
+    <line x1="38" y1="38" x2="22" y2="50" stroke="${S}" stroke-width="${W}"/>
+  </svg>`,
+
+  // ── Clock reach: single-leg, free leg sweeps to clock positions ──
+  clock_reach: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="50" cy="16" r="8" fill="${A}" stroke="none"/>
+    <line x1="50" y1="24" x2="50" y2="52" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="34" x2="30" y2="46" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="34" x2="70" y2="46" stroke="${A}" stroke-width="${W}"/>
+    <line x1="50" y1="52" x2="50" y2="82" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-clock 3s ease-in-out infinite;transform-origin:50px 52px">
+      <line x1="50" y1="52" x2="74" y2="66" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="76" cy="67" r="5" fill="${A}" stroke="none"/>
+    </g>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Physio plank rollout: kneeling, arms roll forward ──
+  rollout: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="14" cy="36" r="5" fill="${S}" stroke="none"/>
+    <line x1="5" y1="72" x2="95" y2="72" stroke="${B}" stroke-width="2"/>
+    <circle cx="28" cy="22" r="8" fill="${A}" stroke="none"/>
+    <line x1="28" y1="30" x2="28" y2="52" stroke="${S}" stroke-width="${W}"/>
+    <line x1="28" y1="52" x2="18" y2="72" stroke="${S}" stroke-width="${W}"/>
+    <line x1="28" y1="52" x2="38" y2="72" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-rollout 2s ease-in-out infinite;transform-origin:28px 40px">
+      <line x1="28" y1="40" x2="62" y2="52" stroke="${A}" stroke-width="4.5"/>
+      <line x1="28" y1="40" x2="60" y2="40" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="14" cy="48" r="5" fill="${A}" stroke="none"/>
+    </g>
+  </svg>`,
+
+  // ── Cable hip throw: powerful lateral hip extension ──
+  hip_throw: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="8" y1="10" x2="8" y2="80" stroke="${B}" stroke-width="3" stroke-dasharray="4 3"/>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+    <circle cx="48" cy="18" r="8" fill="${A}" stroke="none"/>
+    <line x1="48" y1="26" x2="48" y2="54" stroke="${S}" stroke-width="${W}"/>
+    <line x1="48" y1="38" x2="30" y2="48" stroke="${S}" stroke-width="${W}"/>
+    <line x1="48" y1="38" x2="66" y2="48" stroke="${A}" stroke-width="${W}"/>
+    <g style="animation:fig-hip-throw 1.4s ease-in-out infinite;transform-origin:48px 54px">
+      <line x1="48" y1="54" x2="36" y2="82" stroke="${S}" stroke-width="${W}"/>
+      <line x1="48" y1="54" x2="60" y2="82" stroke="${S}" stroke-width="${W}"/>
+    </g>
+    <line x1="8" y1="44" x2="30" y2="44" stroke="${S}" stroke-width="2" stroke-dasharray="3 2"/>
+  </svg>`,
+
+  // ── Stretch: arms spread wide, standing ──
+  stretch: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="50" cy="18" r="8" fill="${A}" stroke="none"/>
+    <line x1="50" y1="26" x2="50" y2="56" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-stretch 2s ease-in-out infinite;transform-origin:50px 36px">
+      <line x1="50" y1="36" x2="12" y2="46" stroke="${A}" stroke-width="4.5"/>
+      <line x1="50" y1="36" x2="88" y2="46" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="10" cy="47" r="4" fill="${A}" stroke="none"/>
+      <circle cx="90" cy="47" r="4" fill="${A}" stroke="none"/>
+    </g>
+    <line x1="50" y1="56" x2="38" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="56" x2="62" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── TRX trap stretch: arms overhead on straps, lean back ──
+  trap_stretch: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="30" y1="5" x2="70" y2="5" stroke="${S}" stroke-width="4"/>
+    <g style="animation:fig-trap 2s ease-in-out infinite;transform-origin:50px 30px">
+      <line x1="50" y1="5" x2="42" y2="22" stroke="${A}" stroke-width="${W}"/>
+      <line x1="50" y1="5" x2="58" y2="22" stroke="${A}" stroke-width="${W}"/>
+      <circle cx="50" cy="29" r="8" fill="${A}" stroke="none"/>
+      <line x1="50" y1="37" x2="50" y2="60" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="47" x2="32" y2="56" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="47" x2="68" y2="56" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="60" x2="40" y2="82" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="60" x2="60" y2="82" stroke="${S}" stroke-width="${W}"/>
+    </g>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Rotation (lying T-rot / sword pull fallback) ──
+  rotation: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="50" cy="17" r="8" fill="${A}" stroke="none"/>
+    <line x1="50" y1="25" x2="50" y2="55" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-rotate 2s ease-in-out infinite;transform-origin:50px 36px">
+      <line x1="50" y1="36" x2="16" y2="36" stroke="${A}" stroke-width="4.5"/>
+      <line x1="50" y1="36" x2="84" y2="36" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="14" cy="36" r="4" fill="${A}" stroke="none"/>
+      <circle cx="86" cy="36" r="4" fill="${A}" stroke="none"/>
+    </g>
+    <line x1="50" y1="55" x2="38" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="55" x2="62" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Activation: figure with pulsing core highlight ──
+  activation: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="50" cy="18" r="8" fill="${A}" stroke="none"/>
+    <line x1="50" y1="26" x2="50" y2="56" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="36" x2="30" y2="48" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="36" x2="70" y2="48" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="56" x2="38" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="50" y1="56" x2="62" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <circle cx="50" cy="41" r="7" fill="${A}" stroke="none" style="animation:fig-pulse 1.4s ease-in-out infinite"/>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Sled drive: forward lean pushing handles ──
+  drive: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="60" y="52" width="26" height="16" rx="3" fill="${B}" stroke="${S}" stroke-width="2"/>
+    <line x1="62" y1="68" x2="56" y2="74" stroke="${S}" stroke-width="2"/>
+    <line x1="84" y1="68" x2="78" y2="74" stroke="${S}" stroke-width="2"/>
+    <g style="animation:fig-drive 1.6s ease-in-out infinite;transform-origin:34px 44px">
+      <circle cx="17" cy="20" r="8" fill="${A}" stroke="none"/>
+      <line x1="17" y1="28" x2="34" y2="46" stroke="${S}" stroke-width="${W}"/>
+      <line x1="27" y1="38" x2="62" y2="52" stroke="${A}" stroke-width="4.5"/>
+      <line x1="27" y1="38" x2="60" y2="60" stroke="${A}" stroke-width="4.5"/>
+      <line x1="34" y1="46" x2="20" y2="72" stroke="${S}" stroke-width="${W}"/>
+      <line x1="34" y1="46" x2="46" y2="70" stroke="${S}" stroke-width="${W}"/>
+    </g>
+    <line x1="5" y1="76" x2="95" y2="76" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Roll: figure rolling (tripod roll / hip roll) ──
+  roll: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g style="animation:fig-roll 2.2s linear infinite;transform-origin:50px 58px">
+      <circle cx="50" cy="44" r="8" fill="${A}" stroke="none"/>
+      <line x1="50" y1="52" x2="50" y2="65" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="57" x2="36" y2="52" stroke="${A}" stroke-width="4"/>
+      <line x1="50" y1="57" x2="64" y2="52" stroke="${A}" stroke-width="4"/>
+      <line x1="50" y1="65" x2="40" y2="76" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="65" x2="60" y2="76" stroke="${S}" stroke-width="${W}"/>
+    </g>
+    <line x1="5" y1="80" x2="95" y2="80" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Press (cable press / standing push) ──
+  press: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="30" cy="18" r="8" fill="${A}" stroke="none"/>
+    <line x1="30" y1="26" x2="30" y2="56" stroke="${S}" stroke-width="${W}"/>
+    <line x1="30" y1="56" x2="20" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <line x1="30" y1="56" x2="40" y2="80" stroke="${S}" stroke-width="${W}"/>
+    <g style="animation:fig-anti-rot 1.6s ease-in-out infinite;transform-origin:30px 36px">
+      <line x1="30" y1="36" x2="66" y2="36" stroke="${A}" stroke-width="4.5"/>
+      <circle cx="68" cy="36" r="4" fill="${A}" stroke="none"/>
+    </g>
+    <line x1="30" y1="36" x2="18" y2="52" stroke="${S}" stroke-width="${W}"/>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+
+  // ── Balance (single-leg wobble) ──
+  balance: `<svg class="fig" viewBox="0 0 100 90" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g style="animation:fig-hang 2s ease-in-out infinite;transform-origin:50px 78px">
+      <circle cx="50" cy="14" r="8" fill="${A}" stroke="none"/>
+      <line x1="50" y1="22" x2="50" y2="52" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="32" x2="28" y2="44" stroke="${A}" stroke-width="4"/>
+      <line x1="50" y1="32" x2="72" y2="44" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="52" x2="50" y2="80" stroke="${S}" stroke-width="${W}"/>
+      <line x1="50" y1="52" x2="68" y2="66" stroke="${A}" stroke-width="4"/>
+    </g>
+    <line x1="5" y1="82" x2="95" y2="82" stroke="${B}" stroke-width="2"/>
+  </svg>`,
+};
+
+// ─────────────────────────────────────────────────────────────
+// EXERCISE LIBRARY DATA
+// ─────────────────────────────────────────────────────────────
+const exerciseLibrary = [
+  { name: "Tripod Bridge",              cat: "glutes",   anim: "bridge",     count: 5, desc: "Lying on back, drive hips up through a single-leg or standard bridge" },
+  { name: "QDPD Float",                cat: "core",     anim: "float",      count: 4, desc: "Quadruped position — float one arm or leg while maintaining a neutral spine" },
+  { name: "Tripod Bridge (Hold)",      cat: "glutes",   anim: "bridge",     count: 3, desc: "Same as Tripod Bridge but with an isometric hold at the top" },
+  { name: "Forearm Buildups",          cat: "upper",    anim: "activation", count: 3, desc: "Progressive forearm loading to build grip and wrist strength" },
+  { name: "Prone Cobra",               cat: "core",     anim: "prone_ext",  count: 3, desc: "Lie face down and press the upper body up into extension to open the chest and strengthen the spine" },
+  { name: "TRX Hang",                  cat: "upper",    anim: "hang",       count: 2, desc: "Hang from TRX straps to decompress the spine and build shoulder stability" },
+  { name: "TRX Cross Side Hang",       cat: "core",     anim: "hang",       count: 2, desc: "TRX cross-body hang challenge — builds oblique and shoulder girdle stability in a suspended position" },
+  { name: "Physio Spine Stretch",      cat: "mobility", anim: "stretch",    count: 2, desc: "Full-body spinal mobility sequence to prepare joints and tissues for training" },
+  { name: "Physio Chest Activation",   cat: "upper",    anim: "activation", count: 2, desc: "Activate pec and shoulder girdle before pressing movements" },
+  { name: "Staggered Low Cable Row",   cat: "upper",    anim: "row",        count: 2, desc: "Staggered stance low cable row — pull toward the torso from a low anchor, retracting the shoulder blade" },
+  { name: "Lateral Walks",             cat: "glutes",   anim: "walk",       count: 2, desc: "Side-step with resistance band to activate the glute med" },
+  { name: "Lateral Crawl",             cat: "full",     anim: "crawl",      count: 2, desc: "Quadruped crawling pattern moving laterally to build core and shoulder stability" },
+  { name: "All 4's Step Backs",        cat: "lower",    anim: "step_back",  count: 2, desc: "From a quadruped position, step one foot back to extend the hip — targets glutes and deep core" },
+  { name: "Squat Work",                cat: "lower",    anim: "squat",      count: 1, desc: "General squat pattern work focusing on mechanics, depth, and load progression" },
+  { name: "Tripod Sit-Up",             cat: "core",     anim: "bridge",     count: 1, desc: "From a tripod position, perform a controlled sit-up with rotation" },
+  { name: "Tripod Roll (Hip)",         cat: "mobility", anim: "roll",       count: 1, desc: "Roll through the hip in a tripod position to restore internal rotation" },
+  { name: "TRX Squat",                 cat: "lower",    anim: "squat",      count: 1, desc: "Squat holding TRX straps for counterbalance and depth" },
+  { name: "Mackenzie Press",           cat: "upper",    anim: "prone_ext",  count: 1, desc: "Prone press-up extension — press up from lying face down to extend the lumbar spine" },
+  { name: "Contra Balance Walks",      cat: "balance",  anim: "walk",       count: 1, desc: "Contralateral arm-leg walk to challenge dynamic balance and cross-body coordination" },
+  { name: "Hinge-Ups",                 cat: "glutes",   anim: "hinge",      count: 1, desc: "Hip hinge drill loading the posterior chain with a slight rise" },
+  { name: "Physio Seated Low Row",     cat: "upper",    anim: "seated_row", count: 1, desc: "Seated low row in a physio context — builds mid-back strength with controlled load" },
+  { name: "Leg up Lying T-rot",        cat: "mobility", anim: "lying_rot",  count: 1, desc: "Lie on back with one leg raised and rotate the spine — restores thoracic rotation and hip mobility" },
+  { name: "Trap Release",              cat: "mobility", anim: "stretch",    count: 1, desc: "Targeted release of the trapezius muscle using pressure or stretch to reduce neck and shoulder tension" },
+  { name: "Standing Cable Press",      cat: "upper",    anim: "press",      count: 1, desc: "Anti-rotation cable press — resist the pull as you extend the arm" },
+  { name: "Sled Drive",                cat: "full",     anim: "drive",      count: 1, desc: "Push the weighted sled forward with powerful hip extension and arm drive" },
+  { name: "Hinge up to Press up",      cat: "full",     anim: "hinge",      count: 1, desc: "Hip hinge into a single-arm press — combines posterior and anterior chain in one movement" },
+  { name: "Cable Reach Squat",         cat: "full",     anim: "squat",      count: 1, desc: "Squat while reaching toward a cable — trains coordination and full-body strength" },
+  { name: "Ecc Press Up",              cat: "upper",    anim: "pushup",     count: 2, desc: "Eccentric press-up — lower slowly under control to build shoulder and pec strength" },
+  { name: "TRX Trap Stretch",          cat: "mobility", anim: "trap_stretch",count: 1, desc: "Use TRX straps to unload the body and stretch the trapezius and upper back" },
+  { name: "Sword Pull",                cat: "upper",    anim: "sword_pull", count: 1, desc: "Diagonal cable pull from low to high — mimics drawing a sword, trains rotator cuff and serratus" },
+  { name: "Hinge Row",                 cat: "upper",    anim: "row",        count: 1, desc: "Hip hinge into a row — loads the posterior chain while pulling through the upper back" },
+  { name: "Cable Belly Hip Pivot",     cat: "glutes",   anim: "hinge",      count: 1, desc: "Cable-loaded hip pivot from the belly — trains glute extension and hip hinge pattern" },
+  { name: "Close Push",                cat: "upper",    anim: "pushup",     count: 1, desc: "Narrow-grip push-up or press emphasizing triceps and inner chest" },
+  { name: "Hip/Kidney Activation",     cat: "mobility", anim: "activation", count: 1, desc: "Gentle mobility movements to wake up hip flexors and lumbar region" },
+  { name: "Single Cable Rows",         cat: "upper",    anim: "row",        count: 1, desc: "One-arm cable row — isolate lat engagement and anti-rotation core work" },
+  { name: "Physio Plank Rollout",      cat: "core",     anim: "rollout",    count: 1, desc: "From a plank position, roll out using a physio ball or wheel — challenges deep core and shoulder stability" },
+  { name: "Hip Flexor Balance",        cat: "balance",  anim: "balance",    count: 1, desc: "Balance drill that loads and stretches the hip flexors simultaneously" },
+  { name: "Staggered Cable Press",     cat: "upper",    anim: "press",      count: 1, desc: "Staggered stance cable press through multiple height positions — low, mid, and high" },
+  { name: "Reverse Lunge",             cat: "lower",    anim: "lunge",      count: 1, desc: "Step backward into a lunge to focus the load on the front glute" },
+  { name: "Crawl",                     cat: "full",     anim: "crawl",      count: 1, desc: "Contralateral crawl pattern to build core coordination and shoulder strength" },
+  { name: "Clock Large Ball Reach",    cat: "balance",  anim: "clock_reach",count: 1, desc: "Single-leg balance while reaching to clock positions with a large ball — trains dynamic stability" },
+  { name: "Marching Balance",          cat: "balance",  anim: "march",      count: 1, desc: "Alternate knee drive while holding single-leg stance to train gait stability" },
+  { name: "Cable Hip Throws",          cat: "glutes",   anim: "hip_throw",  count: 1, desc: "Powerful cable hip extension with rotation — trains gluteal drive" },
+  { name: "Step Downs & Reach",        cat: "lower",    anim: "squat",      count: 1, desc: "Eccentric step-down off a box while reaching forward — eccentric quad control" },
+  { name: "Physio Bridge Activ.",      cat: "glutes",   anim: "bridge",     count: 1, desc: "Low-load bridge activation — wake up the glutes before heavier work" },
+  { name: "Cable Stretches",           cat: "mobility", anim: "stretch",    count: 1, desc: "Cable-assisted stretching targeting thoracic and hip mobility through controlled resistance" },
+  { name: "DDBG",                      cat: "core",     anim: "deadbug",    count: 1, desc: "Diagonal deadbug — opposite arm and leg lower simultaneously keeping low back flat" },
+  { name: "Cable Rotation",            cat: "core",     anim: "anti_rot",   count: 1, desc: "Standing cable wood-chop or Pallof rotation to build rotational strength" },
+  { name: "QDPD OH Press",             cat: "upper",    anim: "press",      count: 1, desc: "Quadruped overhead press — press from a 4-point position for shoulder stability" },
+];
+
+// Custom exercises added by user (persisted in localStorage)
+let customExercises = JSON.parse(localStorage.getItem('proResultsCustomExercises') || '[]');
+
+// Deduplicate by name — returns built-ins + user-added, built-ins first
+function getUniqueExercises() {
+  const seen = new Set();
+  const all = [...exerciseLibrary, ...customExercises];
+  return all.filter(e => {
+    if (seen.has(e.name)) return false;
+    seen.add(e.name);
+    return true;
+  }).sort((a, b) => b.count - a.count);
+}
+// Kept as live reference; use getUniqueExercises() wherever freshness matters
+let uniqueExercises = getUniqueExercises();
+
+// ─────────────────────────────────────────────────────────────
+// SESSION DATA
+// ─────────────────────────────────────────────────────────────
+const sessions = [
+  {
+    date: "2026-04-22", label: "Apr 22",
+    exercises: [
+      { name: "Physio Spine Stretch",    sets: 1, reps: "1 min",       weight: "",        note: "Spinal mobility warm-up" },
+      { name: "Mackenzie Press",         sets: 1, reps: "1 min",       weight: "",        note: "" },
+      { name: "Contra Balance Walks",    sets: 1, reps: "12",          weight: "3–15 lb", note: "" },
+      { name: "Hinge-Ups",               sets: 1, reps: "12",          weight: "",        note: "" },
+      { name: "Physio Seated Low Row",   sets: 1, reps: "GT",          weight: "2 lb",    note: "Physio variation" },
+      { name: "Tripod Bridge",           sets: 1, reps: "6 each",      weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-04-16", label: "Apr 16",
+    exercises: [
+      { name: "Leg up Lying T-rot",      sets: 2, reps: "70",          weight: "",        note: "" },
+      { name: "Trap Release",            sets: 1, reps: "12–13",       weight: "",        note: "" },
+      { name: "All 4's Step Backs",      sets: 2, reps: "12",          weight: "",        note: "" },
+      { name: "Standing Cable Press",    sets: 2, reps: "12",          weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-04-08", label: "Apr 8",
+    exercises: [
+      { name: "Squat Work",              sets: 3, reps: "",            weight: "",        note: "Focus on mechanics and depth" },
+      { name: "Physio Chest Activation", sets: 2, reps: "5",           weight: "",        note: "5B each side" },
+      { name: "Staggered Low Cable Row", sets: 2, reps: "9 each",      weight: "2 lb",    note: "" },
+      { name: "QDPD Float",              sets: 1, reps: "7 sec",       weight: "",        note: "" },
+      { name: "Sled Drive",              sets: 1, reps: "90 sec",      weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-03-31", label: "Mar 31",
+    exercises: [
+      { name: "Hinge up to Press up",    sets: 1, reps: "12",          weight: "",        note: "" },
+      { name: "Lateral Walks",           sets: 2, reps: "",            weight: "15–25 lb",note: "" },
+      { name: "Lateral Crawl",           sets: 1, reps: "15",          weight: "",        note: "" },
+      { name: "Tripod Bridge",           sets: 1, reps: "6 each",      weight: "",        note: "" },
+      { name: "QDPD Float",              sets: 1, reps: "30",          weight: "",        note: "" },
+      { name: "Cable Reach Squat",       sets: 2, reps: "9",           weight: "7.5–9 lb",note: "" },
+      { name: "Ecc Press Up",            sets: 1, reps: "9",           weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-03-29", label: "Mar 29",
+    exercises: [
+      { name: "Forearm Buildups",        sets: 1, reps: "",            weight: "",        note: "Warm-up" },
+      { name: "Prone Cobra",             sets: 1, reps: "",            weight: "",        note: "" },
+      { name: "TRX Trap Stretch",        sets: 1, reps: "",            weight: "",        note: "" },
+      { name: "Sword Pull",              sets: 1, reps: "12",          weight: "",        note: "" },
+      { name: "Hinge Row",               sets: 2, reps: "9–12",        weight: "",        note: "" },
+      { name: "Cable Belly Hip Pivot",   sets: 2, reps: "9–10",        weight: "",        note: "" },
+      { name: "Close Push",              sets: 1, reps: "9",           weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-03-18", label: "Mar 18",
+    exercises: [
+      { name: "Hip/Kidney Activation",   sets: 1, reps: "1–3 min",    weight: "",        note: "Recovery warm-up" },
+      { name: "Tripod Bridge (Hold)",    sets: 3, reps: "30 sec",      weight: "",        note: "Hold at top" },
+      { name: "Lateral Crawl",           sets: 3, reps: "10",          weight: "",        note: "Black resistance band" },
+      { name: "Single Cable Rows",       sets: 3, reps: "9 each",      weight: "10 lb",   note: "" },
+      { name: "Physio Plank Rollout",    sets: 1, reps: "15",          weight: "",        note: "" },
+      { name: "Hip Flexor Balance",      sets: 2, reps: "GT",          weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-03-11", label: "Mar 11",
+    exercises: [
+      { name: "Forearm Buildups",        sets: 1, reps: "",            weight: "",        note: "Warm-up" },
+      { name: "Prone Cobra",             sets: 1, reps: "",            weight: "",        note: "" },
+      { name: "Staggered Cable Press",   sets: 3, reps: "9 each",      weight: "7–10 lb", note: "" },
+      { name: "Ecc Press Up",            sets: 2, reps: "GT–6",        weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-03-10", label: "Mar 10",
+    exercises: [
+      { name: "Tripod Bridge",           sets: 1, reps: "6 each",      weight: "",        note: "" },
+      { name: "QDPD OH Press",           sets: 2, reps: "9 each",      weight: "",        note: "" },
+      { name: "Reverse Lunge",           sets: 1, reps: "9 each",      weight: "",        note: "" },
+      { name: "Sled Drive",              sets: 1, reps: "20\"",         weight: "9 lb",    note: "" },
+      { name: "Crawl",                   sets: 1, reps: "10 min",      weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-02-26", label: "Feb 26",
+    exercises: [
+      { name: "TRX Hang",                sets: 2, reps: "16 each",     weight: "",        note: "" },
+      { name: "TRX Cross Side Hang",     sets: 2, reps: "16 each",     weight: "",        note: "" },
+      { name: "Clock Large Ball Reach",  sets: 2, reps: "12",          weight: "",        note: "" },
+      { name: "Marching Balance",        sets: 2, reps: "12–14 each",  weight: "",        note: "" },
+      { name: "Cable Hip Throws",        sets: 2, reps: "14 each",     weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-02-17", label: "Feb 17",
+    exercises: [
+      { name: "Tripod Bridge",           sets: 3, reps: "6 each",      weight: "",        note: "" },
+      { name: "Step Downs & Reach",      sets: 3, reps: "6 each",      weight: "27 lb",   note: "" },
+      { name: "Physio Bridge Activ.",    sets: 2, reps: "8",           weight: "30–40 lb",note: "" }
+    ]
+  },
+  {
+    date: "2026-02-12", label: "Feb 12",
+    exercises: [
+      { name: "Cable Stretches",         sets: 1, reps: "even both sides", weight: "",    note: "Right side weaker" },
+      { name: "DDBG",                    sets: 3, reps: "6 each",      weight: "",        note: "30 sec hold" },
+      { name: "All 4's Step Backs",      sets: 3, reps: "6 each",      weight: "",        note: "" },
+      { name: "Cable Rotation",          sets: 3, reps: "6–10 each",   weight: "75 lb",   note: "" }
+    ]
+  },
+  {
+    date: "2026-02-10", label: "Feb 10",
+    exercises: [
+      { name: "Tripod Roll (Hip)",       sets: 4, reps: "6–10 each",   weight: "",        note: "" },
+      { name: "QDPD Float",              sets: 2, reps: "30 sec",      weight: "",        note: "" },
+      { name: "TRX Squat",               sets: 4, reps: "6–9 each",    weight: "",        note: "" },
+      { name: "Tripod Bridge",           sets: 4, reps: "6 each",      weight: "",        note: "" }
+    ]
+  },
+  {
+    date: "2026-02-05", label: "Feb 5",
+    exercises: [
+      { name: "Tripod Sit-Up",           sets: 4, reps: "6–10 each",   weight: "",        note: "" },
+      { name: "QDPD Float",              sets: 4, reps: "20–30 sec",   weight: "",        note: "" }
+    ]
+  }
+];
+
+// ─────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────
+let activeCategory = 'all';
+let customSessions = JSON.parse(localStorage.getItem('proResultsCustomSessions') || '[]');
+
+function getAllSessions() {
+  return [...sessions, ...customSessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+// ─────────────────────────────────────────────────────────────
+// SESSIONS
+// ─────────────────────────────────────────────────────────────
+function renderSessions(filter = '') {
+  const container = document.getElementById('sessions-container');
+  container.innerHTML = '';
+  const q = filter.toLowerCase().trim();
+
+  getAllSessions().forEach((session, si) => {
+    const matches = !q || session.exercises.some(e => e.name.toLowerCase().includes(q));
+    if (!matches) return;
+
+    const previewText = session.exercises.slice(0, 2).map(e => e.name).join(', ') +
+      (session.exercises.length > 2 ? ` +${session.exercises.length - 2} more` : '');
+
+    const card = document.createElement('div');
+    card.className = 'session-card';
+    card.id = `session-${si}`;
+    card.innerHTML = `
+      <div class="session-header" onclick="toggleSession(${si})">
+        <span class="session-date-badge">${session.label}</span>
+        <div class="session-meta">
+          <div class="session-title">${previewText}</div>
+          <div class="session-count">${session.exercises.length} exercises</div>
+        </div>
+        <svg class="session-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="exercise-list">
+        ${session.exercises.map((ex, ei) => renderExerciseItem(ex, si, ei, session.date, q)).join('')}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  if (!container.children.length) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text2);padding:60px 20px;font-size:15px;">No exercises match "<strong>${filter}</strong>"</div>`;
+  }
+}
+
+function renderExerciseItem(ex, si, ei, sessionDate, highlight = '') {
+  const tags = [];
+  if (ex.sets > 1) tags.push(`<span class="tag tag-sets">${ex.sets} sets</span>`);
+  if (ex.reps) tags.push(`<span class="tag tag-reps">${ex.reps} reps</span>`);
+  if (ex.weight) tags.push(`<span class="tag tag-weight">${ex.weight}</span>`);
+
+  let name = ex.name;
+  if (highlight) {
+    const re = new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+    name = name.replace(re, '<mark style="background:var(--accent);color:#fff;border-radius:2px;padding:0 2px">$1</mark>');
+  }
+
+  return `
+    <div class="exercise-item">
+      <div class="exercise-name">${name}</div>
+      ${tags.length ? `<div class="exercise-tags">${tags.join('')}</div>` : ''}
+      ${ex.note ? `<div class="exercise-note">${ex.note}</div>` : ''}
+    </div>
+  `;
+}
+
+function toggleSession(si) {
+  document.getElementById(`session-${si}`).classList.toggle('expanded');
+}
+function filterSessions(val) { renderSessions(val); }
+
+// ─────────────────────────────────────────────────────────────
+// EXERCISES PAGE
+// ─────────────────────────────────────────────────────────────
+const categories = [
+  { id: 'all',     label: 'All' },
+  { id: 'core',    label: 'Core' },
+  { id: 'glutes',  label: 'Glutes' },
+  { id: 'upper',   label: 'Upper Body' },
+  { id: 'lower',   label: 'Lower Body' },
+  { id: 'full',    label: 'Full Body' },
+  { id: 'balance', label: 'Balance' },
+  { id: 'mobility',label: 'Mobility' },
+  { id: 'cardio',  label: 'Cardio' },
+];
+
+const catLabel = { core:'Core', glutes:'Glutes', upper:'Upper', lower:'Lower', full:'Full Body', balance:'Balance', mobility:'Mobility', cardio:'Cardio' };
+
+function renderExerciseChips() {
+  document.getElementById('ex-chips').innerHTML = categories.map(c => `
+    <button class="ex-chip ${c.id === activeCategory ? 'active' : ''}" onclick="setExCategory('${c.id}')">${c.label}</button>
+  `).join('');
+}
+
+function setExCategory(cat) {
+  activeCategory = cat;
+  renderExerciseChips();
+  renderExerciseGrid();
+}
+
+function filterExercises() { renderExerciseGrid(); }
+
+// ── Add Exercise modal ────────────────────────────────────────────────────
+function openAddExercise() {
+  document.getElementById('ae-name').value = '';
+  document.getElementById('ae-cat').value = 'core';
+  document.getElementById('ae-desc').value = '';
+  document.getElementById('add-ex-modal').classList.add('open');
+  setTimeout(() => document.getElementById('ae-name').focus(), 300);
+}
+function closeAddExercise() {
+  document.getElementById('add-ex-modal').classList.remove('open');
+}
+function saveAddExercise() {
+  const name = document.getElementById('ae-name').value.trim();
+  if (!name) { document.getElementById('ae-name').focus(); return; }
+  const cat  = document.getElementById('ae-cat').value;
+  const desc = document.getElementById('ae-desc').value.trim();
+  // Pick an animation that matches the category (best-guess default)
+  const animMap = { core:'plank', glutes:'bridge', upper:'row', lower:'squat',
+                    full:'drive', balance:'balance', mobility:'stretch', cardio:'walk' };
+  const newEx = { name, cat, desc: desc || `${name} exercise`, anim: animMap[cat] || 'activation', count: 0, custom: true };
+  customExercises.push(newEx);
+  localStorage.setItem('proResultsCustomExercises', JSON.stringify(customExercises));
+  uniqueExercises = getUniqueExercises();
+  closeAddExercise();
+  renderExerciseGrid();
+}
+function deleteCustomExercise(name) {
+  customExercises = customExercises.filter(e => e.name !== name);
+  localStorage.setItem('proResultsCustomExercises', JSON.stringify(customExercises));
+  uniqueExercises = getUniqueExercises();
+  renderExerciseGrid();
+}
+document.getElementById('add-ex-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('add-ex-modal')) closeAddExercise();
+});
+
+function renderExerciseGrid() {
+  const q = document.getElementById('ex-search').value.toLowerCase().trim();
+  const grid = document.getElementById('ex-grid');
+
+  const filtered = uniqueExercises.filter(e => {
+    const catMatch = activeCategory === 'all' || e.cat === activeCategory;
+    const nameMatch = !q || e.name.toLowerCase().includes(q) || (e.desc || '').toLowerCase().includes(q);
+    return catMatch && nameMatch;
+  });
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--text2);padding:40px 0;font-size:14px;">No exercises found</div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(e => {
+    const svg = animSvgs[e.anim] || animSvgs.activation;
+    const cClass = `cat-${e.cat}`;
+    const safeName = e.name.replace(/'/g, "\\'");
+    return `
+      <div class="ex-card">
+        <div class="ex-anim-box">${svg}</div>
+        <div class="ex-card-body">
+          <div class="ex-card-name">${e.name}${e.custom ? `
+            <button onclick="deleteCustomExercise('${safeName}')" title="Remove" style="float:right;background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;line-height:1;padding:0 2px">×</button>` : ''}
+          </div>
+          <div class="ex-card-desc">${e.desc || ''}</div>
+          <div class="ex-card-meta">
+            <span class="ex-cat-badge ${cClass}">${catLabel[e.cat] || e.cat}</span>
+            ${e.custom ? '<span style="font-size:10px;color:var(--accent2);font-weight:600">Custom</span>' : `<span class="ex-count-badge">${e.count}×</span>`}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// STATS PAGE
+// ─────────────────────────────────────────────────────────────
+function renderStats() {
+  const allSess = getAllSessions();
+  const totalEx = allSess.reduce((s, sess) => s + sess.exercises.length, 0);
+  const freq = {};
+  allSess.forEach(sess => sess.exercises.forEach(ex => { freq[ex.name] = (freq[ex.name] || 0) + 1; }));
+  const top = Object.entries(freq).sort((a,b) => b[1]-a[1]).slice(0, 8);
+  const maxF = top[0]?.[1] || 1;
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card"><div class="stat-number">${allSess.length}</div><div class="stat-label">Training Sessions</div></div>
+    <div class="stat-card"><div class="stat-number">${uniqueExercises.length}</div><div class="stat-label">Unique Exercises</div></div>
+    <div class="stat-card"><div class="stat-number">${doneDates.length}</div><div class="stat-label">Sessions Done</div></div>
+    <div class="stat-card"><div class="stat-number">${totalEx}</div><div class="stat-label">Total Exercises</div></div>
+  `;
+  document.getElementById('freq-container').innerHTML = top.map(([name, count]) => `
+    <div class="exercise-freq-row">
+      <div class="exercise-freq-name">${name}</div>
+      <div class="exercise-freq-bar-wrap"><div class="exercise-freq-bar" style="width:${Math.round(count/maxF*100)}%"></div></div>
+      <div class="exercise-freq-count">${count}×</div>
+    </div>
+  `).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────────────────────
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('scan-fab').classList.toggle('hidden', name !== 'sessions');
+  document.getElementById('ex-fab').classList.toggle('hidden', name !== 'exercises');
+}
+
+// ─────────────────────────────────────────────────────────────
+// NEW SESSION
+// ─────────────────────────────────────────────────────────────
+function openNewSession() {
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('ns-date').value = today;
+  document.getElementById('ns-ex-rows').innerHTML = '';
+  const img = document.getElementById('scan-preview-img');
+  img.src = ''; img.style.display = 'none';
+  document.getElementById('scan-file-input').value = '';
+  addExRow();
+  document.getElementById('new-sess-modal').classList.add('open');
+}
+
+function closeNewSession() {
+  document.getElementById('new-sess-modal').classList.remove('open');
+}
+
+document.getElementById('new-sess-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('new-sess-modal')) closeNewSession();
+});
+
+function handleScanFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('scan-preview-img');
+    img.src = e.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function addExRow() {
+  const container = document.getElementById('ns-ex-rows');
+  const row = document.createElement('div');
+  row.className = 'ex-entry-row';
+  row.innerHTML = `
+    <button class="ex-entry-remove" onclick="this.closest('.ex-entry-row').remove()" type="button">✕</button>
+    <input class="form-input ex-entry-name" placeholder="Exercise name" style="width:100%;margin-bottom:8px">
+    <div class="ex-entry-grid">
+      <input class="form-input" placeholder="Sets" type="number" min="1" style="font-size:14px">
+      <input class="form-input" placeholder="Reps / Time" style="font-size:14px">
+      <input class="form-input" placeholder="Weight" style="font-size:14px">
+    </div>
+  `;
+  container.appendChild(row);
+  row.querySelector('.ex-entry-name').focus();
+}
+
+function saveNewSession() {
+  const dateVal = document.getElementById('ns-date').value;
+  if (!dateVal) { document.getElementById('ns-date').focus(); return; }
+
+  const rows = document.querySelectorAll('#ns-ex-rows .ex-entry-row');
+  const exercises = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    if (!name) return;
+    exercises.push({
+      name,
+      sets: parseInt(inputs[1].value) || 1,
+      reps: inputs[2].value.trim(),
+      weight: inputs[3].value.trim(),
+      note: ''
+    });
+  });
+
+  if (!exercises.length) {
+    alert('Please add at least one exercise.');
+    return;
+  }
+
+  const d = new Date(dateVal + 'T12:00:00');
+  const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  customSessions.push({ date: dateVal, label, exercises, custom: true });
+  customSessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+  localStorage.setItem('proResultsCustomSessions', JSON.stringify(customSessions));
+
+  closeNewSession();
+  renderSessions(document.getElementById('session-search').value);
+  renderStats();
+}
+
+// ─────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// SCHEDULE
+// ─────────────────────────────────────────────────────────────
+const DOW_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DOW_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+// 6 templates — A1/A2, B1/B2, C1/C2 rotate week by week so each session
+// type alternates its exercise selection every other occurrence.
+const DEFAULT_TEMPLATES = [
+  // ── A1: Lower & Glutes — Power focus ────────────────────────────────────
+  {
+    id: 'A1', label: 'Lower & Glutes — Power',
+    exercises: [
+      { name: 'Physio Spine Stretch',   sets: 1, reps: '1 min',   weight: '' },
+      { name: 'Tripod Bridge',          sets: 3, reps: '6 each',  weight: '' },
+      { name: 'Squat Work',             sets: 3, reps: '10',      weight: '' },
+      { name: 'Lateral Walks',          sets: 2, reps: '15',      weight: '15–25 lb' },
+      { name: 'Cable Belly Hip Pivot',  sets: 2, reps: '12 each', weight: '' },
+      { name: 'Sled Drive',             sets: 2, reps: '90 sec',  weight: '' },
+    ]
+  },
+  // ── B1: Core & Upper — Strength focus ───────────────────────────────────
+  {
+    id: 'B1', label: 'Core & Upper — Strength',
+    exercises: [
+      { name: 'Forearm Buildups',        sets: 1, reps: '',        weight: '' },
+      { name: 'Prone Cobra',             sets: 2, reps: '10',      weight: '' },
+      { name: 'DDBG',                    sets: 3, reps: '6 each',  weight: '' },
+      { name: 'Ecc Press Up',            sets: 3, reps: '8',       weight: '' },
+      { name: 'Staggered Low Cable Row', sets: 3, reps: '10 each', weight: '' },
+      { name: 'Cable Rotation',          sets: 3, reps: '10 each', weight: '' },
+    ]
+  },
+  // ── C1: Full Body & Balance — Dynamic ───────────────────────────────────
+  {
+    id: 'C1', label: 'Full Body & Balance — Dynamic',
+    exercises: [
+      { name: 'Hip/Kidney Activation',  sets: 1, reps: '2 min',   weight: '' },
+      { name: 'TRX Hang',               sets: 2, reps: '16 each', weight: '' },
+      { name: 'Hinge Row',              sets: 3, reps: '10',      weight: '' },
+      { name: "All 4's Step Backs",     sets: 3, reps: '10 each', weight: '' },
+      { name: 'Marching Balance',       sets: 2, reps: '12 each', weight: '' },
+      { name: 'Cable Reach Squat',      sets: 3, reps: '9',       weight: '' },
+    ]
+  },
+  // ── A2: Lower & Glutes — Endurance & Control ────────────────────────────
+  {
+    id: 'A2', label: 'Lower & Glutes — Control',
+    exercises: [
+      { name: 'Hip/Kidney Activation',  sets: 1, reps: '2 min',   weight: '' },
+      { name: 'Physio Bridge Activ.',   sets: 2, reps: '15',      weight: '' },
+      { name: "All 4's Step Backs",     sets: 3, reps: '10 each', weight: '' },
+      { name: 'Reverse Lunge',          sets: 3, reps: '10 each', weight: '' },
+      { name: 'Cable Hip Throws',       sets: 2, reps: '12 each', weight: '' },
+      { name: 'Step Downs & Reach',     sets: 2, reps: '10 each', weight: '' },
+    ]
+  },
+  // ── B2: Core & Upper — Stability & Anti-rotation ────────────────────────
+  {
+    id: 'B2', label: 'Core & Upper — Stability',
+    exercises: [
+      { name: 'TRX Trap Stretch',       sets: 1, reps: '1 min',   weight: '' },
+      { name: 'Mackenzie Press',         sets: 2, reps: '10',      weight: '' },
+      { name: 'Physio Plank Rollout',   sets: 3, reps: '8',       weight: '' },
+      { name: 'Sword Pull',             sets: 3, reps: '10 each', weight: '' },
+      { name: 'Single Cable Rows',      sets: 3, reps: '10 each', weight: '' },
+      { name: 'Close Push',             sets: 3, reps: '8',       weight: '' },
+    ]
+  },
+  // ── C2: Full Body & Balance — Coordination ──────────────────────────────
+  {
+    id: 'C2', label: 'Full Body & Balance — Coordination',
+    exercises: [
+      { name: 'Physio Spine Stretch',   sets: 1, reps: '1 min',   weight: '' },
+      { name: 'QDPD Float',             sets: 2, reps: '30 sec',  weight: '' },
+      { name: 'Lateral Crawl',          sets: 2, reps: '10 each', weight: '' },
+      { name: 'Clock Large Ball Reach', sets: 2, reps: '12 pos',  weight: '' },
+      { name: 'Hinge up to Press up',   sets: 3, reps: '10 each', weight: '' },
+      { name: 'Staggered Cable Press',  sets: 3, reps: '10 each', weight: '' },
+    ]
+  },
+];
+
+function loadScheduleConfig() {
+  const saved = localStorage.getItem('proResultsSchedule');
+  if (saved) {
+    const cfg = JSON.parse(saved);
+    // Migrate old 3-template configs to the new 6-template format
+    if (!cfg.templates || cfg.templates.length < 6) {
+      return { days: cfg.days || [1, 3, 5], templates: JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)) };
+    }
+    return cfg;
+  }
+  return { days: [1, 3, 5], templates: JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)) };
+}
+function saveScheduleConfig(cfg) {
+  localStorage.setItem('proResultsSchedule', JSON.stringify(cfg));
+}
+
+let schedConfig = loadScheduleConfig();
+let doneDates      = JSON.parse(localStorage.getItem('proResultsDoneDates') || '[]');
+let dateOverrides  = JSON.parse(localStorage.getItem('proResultsDateOverrides') || '{}');
+let frozenSlots    = JSON.parse(localStorage.getItem('proResultsFrozenSlots') || '[]');
+let openSchedCards = new Set();
+let editingTemplateIdx = null;
+let editingCanonicalDate = null;
+
+function getMondayOf(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const diff = (d.getDay() + 6) % 7; // days since Monday (Sun=6,Mon=0…Sat=5)
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - diff);
+  return mon.toISOString().slice(0, 10);
+}
+
+function freezePastAndDone() {
+  // Call BEFORE changing schedConfig so getScheduleWeeks uses the current days
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weeks = getScheduleWeeks(4);
+  let changed = false;
+  weeks.forEach(({ days }) => {
+    days.forEach(({ dateStr: canonicalDate, templateIdx }) => {
+      const display    = dateOverrides[canonicalDate] || canonicalDate;
+      const displayObj = new Date(display + 'T12:00:00');
+      const isPast     = displayObj < today;
+      const isDone     = doneDates.includes(canonicalDate);
+      if ((isPast || isDone) && !frozenSlots.some(f => f.canonicalDate === canonicalDate)) {
+        frozenSlots.push({ canonicalDate, templateIdx });
+        changed = true;
+      }
+    });
+  });
+  if (changed) localStorage.setItem('proResultsFrozenSlots', JSON.stringify(frozenSlots));
+}
+
+function toggleSchedDay(dow) {
+  freezePastAndDone(); // snapshot past/done before config changes
+  const idx = schedConfig.days.indexOf(dow);
+  if (idx >= 0) {
+    if (schedConfig.days.length <= 1) return; // keep at least 1
+    schedConfig.days.splice(idx, 1);
+  } else {
+    schedConfig.days.push(dow);
+    schedConfig.days.sort((a, b) => a - b);
+  }
+  saveScheduleConfig(schedConfig);
+  renderDayPicker();
+  renderSchedule();
+}
+
+function renderDayPicker() {
+  document.getElementById('day-picker').innerHTML = DOW_NAMES.map((n, i) =>
+    `<button class="day-pill ${schedConfig.days.includes(i) ? 'active' : ''}"
+       onclick="toggleSchedDay(${i})">${n}</button>`
+  ).join('');
+}
+
+function getScheduleWeeks(weeksAhead = 4) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  // find Monday of current week
+  const startOfWeek = new Date(today);
+  const diff = (today.getDay() + 6) % 7; // days since Monday
+  startOfWeek.setDate(today.getDate() - diff);
+
+  const weeks = [];
+  for (let w = 0; w < weeksAhead; w++) {
+    const weekDays = [];
+    schedConfig.days.forEach((dow, tIdx) => {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + w * 7 + (dow === 0 ? 7 : dow) - 1);
+      // adjust: dow 1=Mon…6=Sat, 0=Sun(next)
+      const d2 = new Date(startOfWeek);
+      d2.setDate(startOfWeek.getDate() + w * 7);
+      // simple: find the right day-of-week within that week
+      const target = new Date(startOfWeek);
+      target.setDate(startOfWeek.getDate() + w * 7 + dow - (startOfWeek.getDay() === 0 ? -6 : 1));
+      // recalculate cleanly: Monday of week w, then offset by dow
+      const weekMon = new Date(startOfWeek);
+      weekMon.setDate(startOfWeek.getDate() + w * 7);
+      const dayDate = new Date(weekMon);
+      // dow: 0=Sun,1=Mon,...,6=Sat. weekMon is Monday (1).
+      // offset from Monday = dow===0 ? 6 : dow-1
+      dayDate.setDate(weekMon.getDate() + (dow === 0 ? 6 : dow - 1));
+      // Cycle through all templates across both week and slot position.
+      // With 6 templates and 3 days/week: pattern repeats every 2 weeks.
+      // w=0,tIdx=0→0  w=0,tIdx=1→1  w=0,tIdx=2→2
+      // w=1,tIdx=0→3  w=1,tIdx=1→4  w=1,tIdx=2→5
+      // w=2,tIdx=0→0  (repeats)
+      const nDays = schedConfig.days.length;
+      const templateIdx = (w * nDays + tIdx) % schedConfig.templates.length;
+      weekDays.push({
+        dateStr: dayDate.toISOString().slice(0, 10),
+        dateObj: dayDate,
+        dow,
+        templateIdx,
+      });
+    });
+    weekDays.sort((a, b) => a.dateObj - b.dateObj);
+    weeks.push({ weekMon: new Date(startOfWeek.getTime() + w * 7 * 86400000), days: weekDays });
+  }
+  return weeks;
+}
+
+function renderSchedule() {
+  const today    = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().slice(0, 10);
+
+  // ── Build master slot list ───────────────────────────────────────────────
+  // 1. Start with frozen slots (past / already-done sessions)
+  const frozenKeys = new Set(frozenSlots.map(f => f.canonicalDate));
+  const allSlots = frozenSlots.map(f => ({ ...f, frozen: true }));
+
+  // 2. Add freshly-generated slots, skipping any that are already frozen
+  const genWeeks = getScheduleWeeks(4);
+  genWeeks.forEach(({ days }) => {
+    days.forEach(({ dateStr: canonicalDate, templateIdx }) => {
+      if (!frozenKeys.has(canonicalDate)) {
+        allSlots.push({ canonicalDate, templateIdx, frozen: false });
+      }
+    });
+  });
+
+  // ── Group by week (Monday of display date) ───────────────────────────────
+  const weekMap = {};
+  allSlots.forEach(slot => {
+    const display = dateOverrides[slot.canonicalDate] || slot.canonicalDate;
+    const mon = getMondayOf(display);
+    if (!weekMap[mon]) weekMap[mon] = [];
+    weekMap[mon].push({ ...slot, displayDate: display });
+  });
+  const sortedMons = Object.keys(weekMap).sort();
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  const container = document.getElementById('schedule-container');
+  const todayMon  = getMondayOf(todayStr);
+
+  container.innerHTML = sortedMons.map(monStr => {
+    const weekMon  = new Date(monStr + 'T12:00:00');
+    const wLabel   = weekMon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const isCurrentWeek = monStr === todayMon;
+
+    const days = weekMap[monStr].slice().sort((a, b) => a.displayDate.localeCompare(b.displayDate));
+
+    return `
+      <div class="week-label">${isCurrentWeek ? '⬤ This Week' : 'Week of'} &nbsp;${wLabel}</div>
+      ${days.map(({ canonicalDate, templateIdx }) => {
+        const overrideDate  = dateOverrides[canonicalDate];
+        const displayDate   = overrideDate || canonicalDate;
+        const displayObj    = new Date(displayDate + 'T12:00:00');
+        const isRescheduled = !!overrideDate;
+
+        const tmpl    = schedConfig.templates[templateIdx];
+        const isDone  = doneDates.includes(canonicalDate);
+        const isToday = displayDate === todayStr;
+        const isPast  = displayObj < today && !isToday;
+        const isOpen  = openSchedCards.has(canonicalDate);
+        const dayName = DOW_NAMES[displayObj.getDay()];
+        const dayNum  = displayObj.getDate();
+        const exCount = tmpl.exercises.length;
+        const metaStr = tmpl.exercises.slice(0,2).map(e => e.name).join(', ')
+          + (exCount > 2 ? ` +${exCount - 2}` : '');
+
+        const origObj   = new Date(canonicalDate + 'T12:00:00');
+        const origLabel = origObj.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+
+        return `
+          <div class="sched-card ${isDone?'done':''} ${isToday&&!isDone?'today':''} ${isPast&&!isDone?'past':''} ${isOpen?'open':''}"
+               id="sc-${canonicalDate}">
+            <div class="sched-card-header" onclick="toggleSchedCard('${canonicalDate}')">
+              <div class="sched-date-badge" style="${isRescheduled?'border:1.5px solid var(--accent2);':''}">
+                <div class="sched-date-dow">${dayName}</div>
+                <div class="sched-date-num" style="${isRescheduled?'color:var(--accent2)':''}">${dayNum}</div>
+              </div>
+              <div class="sched-card-meta">
+                <div class="sched-session-label">${tmpl.label}</div>
+                <div class="sched-session-sub">${metaStr}</div>
+              </div>
+              <button class="sched-check-btn ${isDone?'done':''}"
+                      onclick="event.stopPropagation();toggleDone('${canonicalDate}')"
+                      title="${isDone?'Mark undone':'Mark as done'}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+              <svg class="sched-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="sched-card-body">
+              ${tmpl.exercises.map(ex => {
+                const meta = [ex.sets > 1 ? `${ex.sets}×` : '', ex.reps, ex.weight].filter(Boolean).join(' · ');
+                return `<div class="sched-ex-item">
+                  <div class="sched-ex-dot"></div>
+                  <div class="sched-ex-name">${ex.name}</div>
+                  ${meta ? `<div class="sched-ex-meta">${meta}</div>` : ''}
+                </div>`;
+              }).join('')}
+              <div class="sched-card-footer">
+                ${isRescheduled ? `<span class="sched-rescheduled-badge">Moved from ${origLabel}</span>` : ''}
+                <button class="sched-edit-btn" onclick="openReschedule('${canonicalDate}','${displayDate}')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Change Date
+                </button>
+                <button class="sched-edit-btn" onclick="openSchedEdit(${templateIdx})">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Edit Exercises
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('')}`;
+  }).join('');
+}
+
+function toggleSchedCard(dateStr) {
+  if (openSchedCards.has(dateStr)) openSchedCards.delete(dateStr);
+  else openSchedCards.add(dateStr);
+  renderSchedule();
+}
+
+function toggleDone(dateStr) {
+  const idx = doneDates.indexOf(dateStr);
+  if (idx >= 0) {
+    // un-checking: remove from done and un-freeze if it was only frozen due to done status
+    doneDates.splice(idx, 1);
+    const display    = dateOverrides[dateStr] || dateStr;
+    const displayObj = new Date(display + 'T12:00:00');
+    const today      = new Date(); today.setHours(0,0,0,0);
+    const isPast     = displayObj < today;
+    // Only un-freeze if the date isn't also in the past
+    if (!isPast) {
+      frozenSlots = frozenSlots.filter(f => f.canonicalDate !== dateStr);
+      localStorage.setItem('proResultsFrozenSlots', JSON.stringify(frozenSlots));
+    }
+  } else {
+    doneDates.push(dateStr);
+    // Freeze immediately on check-off so day changes won't move it
+    if (!frozenSlots.some(f => f.canonicalDate === dateStr)) {
+      // Find the templateIdx for this slot
+      const genWeeks = getScheduleWeeks(4);
+      let tIdx = 0;
+      genWeeks.forEach(({ days }) => days.forEach(d => { if (d.dateStr === dateStr) tIdx = d.templateIdx; }));
+      frozenSlots.push({ canonicalDate: dateStr, templateIdx: tIdx });
+      localStorage.setItem('proResultsFrozenSlots', JSON.stringify(frozenSlots));
+    }
+  }
+  localStorage.setItem('proResultsDoneDates', JSON.stringify(doneDates));
+  renderSchedule();
+}
+
+// ── Reschedule individual date ──
+function openReschedule(canonicalDate, currentDisplay) {
+  editingCanonicalDate = canonicalDate;
+  const origObj = new Date(canonicalDate + 'T12:00:00');
+  const origFmt = origObj.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  document.getElementById('reschedule-original-label').textContent =
+    `Default: ${origFmt}`;
+  document.getElementById('reschedule-date-input').value = currentDisplay || canonicalDate;
+  document.getElementById('reschedule-modal').classList.add('open');
+}
+
+function closeReschedule() {
+  document.getElementById('reschedule-modal').classList.remove('open');
+  editingCanonicalDate = null;
+}
+
+function saveReschedule() {
+  const newDate = document.getElementById('reschedule-date-input').value;
+  if (!newDate) return;
+  dateOverrides[editingCanonicalDate] = newDate;
+  localStorage.setItem('proResultsDateOverrides', JSON.stringify(dateOverrides));
+  closeReschedule();
+  renderSchedule();
+}
+
+function clearReschedule() {
+  delete dateOverrides[editingCanonicalDate];
+  localStorage.setItem('proResultsDateOverrides', JSON.stringify(dateOverrides));
+  closeReschedule();
+  renderSchedule();
+}
+
+document.getElementById('reschedule-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('reschedule-modal')) closeReschedule();
+});
+
+// ── Schedule Edit Modal ──
+function openSchedEdit(templateIdx) {
+  editingTemplateIdx = templateIdx;
+  const tmpl = schedConfig.templates[templateIdx];
+  document.getElementById('sched-edit-title').textContent = `Edit ${tmpl.label}`;
+  const rows = document.getElementById('sched-edit-rows');
+  rows.innerHTML = '';
+  tmpl.exercises.forEach(ex => addSchedExRow(ex));
+  document.getElementById('sched-edit-modal').classList.add('open');
+}
+
+function closeSchedEdit() {
+  document.getElementById('sched-edit-modal').classList.remove('open');
+  editingTemplateIdx = null;
+}
+
+document.getElementById('sched-edit-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('sched-edit-modal')) closeSchedEdit();
+});
+
+function addSchedExRow(ex = null) {
+  const container = document.getElementById('sched-edit-rows');
+  const row = document.createElement('div');
+  row.className = 'ex-entry-row';
+  row.innerHTML = `
+    <button class="ex-entry-remove" onclick="this.closest('.ex-entry-row').remove()" type="button">✕</button>
+    <div class="ex-name-wrap">
+      <input class="form-input ex-entry-name" placeholder="Exercise name" value="${ex ? ex.name : ''}"
+        style="width:100%"
+        oninput="showExDropdown(this)"
+        onblur="setTimeout(()=>closeExDropdown(this),180)"
+        autocomplete="off">
+    </div>
+    <div class="ex-entry-grid">
+      <input class="form-input" placeholder="Sets" type="number" min="1" value="${ex ? ex.sets : ''}" style="font-size:14px">
+      <input class="form-input" placeholder="Reps / Time" value="${ex ? ex.reps : ''}" style="font-size:14px">
+      <input class="form-input" placeholder="Weight" value="${ex ? ex.weight : ''}" style="font-size:14px">
+    </div>
+  `;
+  container.appendChild(row);
+}
+
+function showExDropdown(input) {
+  closeExDropdown(input);
+  const q = input.value.trim().toLowerCase();
+  if (!q) return;
+
+  const matches = uniqueExercises
+    .filter(e => e.name.toLowerCase().includes(q))
+    .slice(0, 9);
+  if (!matches.length) return;
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'ex-dropdown';
+  dropdown.innerHTML = matches.map(e =>
+    `<div class="ex-dropdown-item" onmousedown="pickExDropdown(event,'${e.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+      <div class="ex-dropdown-dot"></div>${e.name}
+    </div>`
+  ).join('');
+  input.parentElement.appendChild(dropdown);
+}
+
+function closeExDropdown(input) {
+  const wrap = input.closest('.ex-name-wrap') || input.parentElement;
+  wrap.querySelectorAll('.ex-dropdown').forEach(d => d.remove());
+}
+
+function pickExDropdown(e, name) {
+  e.preventDefault();
+  const item = e.currentTarget;
+  const wrap = item.closest('.ex-name-wrap');
+  const input = wrap.querySelector('.ex-entry-name');
+  input.value = name;
+  wrap.querySelectorAll('.ex-dropdown').forEach(d => d.remove());
+  // move focus to Sets field
+  const row = wrap.closest('.ex-entry-row');
+  if (row) row.querySelectorAll('input')[1]?.focus();
+}
+
+function saveSchedEdit() {
+  const rows = document.querySelectorAll('#sched-edit-rows .ex-entry-row');
+  const exercises = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    if (!name) return;
+    exercises.push({ name, sets: parseInt(inputs[1].value) || 1, reps: inputs[2].value.trim(), weight: inputs[3].value.trim() });
+  });
+  if (!exercises.length) { alert('Add at least one exercise.'); return; }
+  schedConfig.templates[editingTemplateIdx].exercises = exercises;
+  saveScheduleConfig(schedConfig);
+  closeSchedEdit();
+  renderSchedule();
+}
+
+// ─────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────
+renderSessions();
+renderExerciseChips();
+renderExerciseGrid();
+renderStats();
+renderDayPicker();
+renderSchedule();
+// Show correct FAB for the default active tab (Sessions)
+document.getElementById('scan-fab').classList.remove('hidden');
+</script>
+</body>
+</html>
